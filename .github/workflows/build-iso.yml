@@ -47,18 +47,28 @@ jobs:
           chmod +x auto/* kok-build-rapor.sh config/hooks/live/* config/includes.chroot/usr/local/bin/* 2>/dev/null || true
           # Bilinen eski paket adlarını düzelt
           sed -i 's/^policykit-1$/polkitd/' config/package-lists/*.list.chroot
-          # Trixie'de adayı olmayan paketleri tek seferde bul ve çıkar
+          # Trixie'de adayı olmayan paketleri bul ve çıkar (güvenli sürüm)
           apt-get update -qq
           : > /tmp/cikti/eksik-paketler.txt
+          TOPLAM=0; EKSIK=0
           for f in config/package-lists/*.list.chroot; do
             while read -r p || [ -n "$p" ]; do
               case "$p" in ''|'#'*) continue;; esac
-              if ! apt-cache policy "$p" 2>/dev/null | grep -q 'Candidate: [^(]'; then
+              TOPLAM=$((TOPLAM+1))
+              ADAY=$(apt-cache policy "$p" 2>/dev/null | awk '/Candidate:/{print $2}')
+              if [ -z "$ADAY" ] || [ "$ADAY" = "(none)" ]; then
+                EKSIK=$((EKSIK+1))
                 echo "[KOK-UYARI:PAKET] trixie'de aday yok, atlandi: $p ($f)" | tee -a /tmp/cikti/eksik-paketler.txt
                 sed -i "/^${p}\$/d" "$f"
               fi
             done < "$f"
           done
+          echo "Paket denetimi: toplam=$TOPLAM eksik=$EKSIK"
+          # Emniyet: çok fazla paket eksik görünüyorsa denetimin kendisi bozuktur
+          if [ "$EKSIK" -gt 8 ]; then
+            echo "HATA: $EKSIK paket eksik görünüyor, denetim güvenilmez. Derleme durduruldu."
+            exit 1
+          fi
           # Kullanılan listelerin son hâli (tanı için)
           for f in config/package-lists/*.list.chroot; do echo "### $f"; cat "$f"; done > /tmp/cikti/paket-listeleri.txt
 

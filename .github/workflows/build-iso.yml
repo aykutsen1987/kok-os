@@ -39,23 +39,33 @@ jobs:
           fi
           echo "KOK_DIR=$(cd "$(dirname "$(dirname "$CFG")")" && pwd)" >> "$GITHUB_ENV"
 
-      - name: ISO derle
+      - name: Dosyaları hazırla ve paketleri denetle
         run: |
           cd "$KOK_DIR"
-          # GitHub web yüklemesi çalıştırma izinlerini siler; geri veriyoruz
+          # Windows satır sonlarını (CRLF) temizle ve çalıştırma izinlerini geri ver
+          find auto config -type f \( -path 'auto/*' -o -path '*/hooks/*' -o -name '*.list.chroot' -o -path '*/usr/local/bin/*' \) -exec sed -i 's/\r$//' {} +
           chmod +x auto/* kok-build-rapor.sh config/hooks/live/* config/includes.chroot/usr/local/bin/* 2>/dev/null || true
-          ls -la auto
-          # Paket ön denetimi: trixie'de olmayan paketler tek seferde bulunur ve atlanır
-          mkdir -p /tmp/cikti; : > /tmp/cikti/eksik-paketler.txt
+          # Bilinen eski paket adlarını düzelt
+          sed -i 's/^policykit-1$/polkitd/' config/package-lists/*.list.chroot
+          # Trixie'de adayı olmayan paketleri tek seferde bul ve çıkar
+          apt-get update -qq
+          : > /tmp/cikti/eksik-paketler.txt
           for f in config/package-lists/*.list.chroot; do
-            while read -r p; do
+            while read -r p || [ -n "$p" ]; do
               case "$p" in ''|'#'*) continue;; esac
-              if ! apt-cache show "$p" >/dev/null 2>&1; then
-                echo "[KOK-UYARI:PAKET] trixie'de yok, atlandi: $p ($f)" | tee -a /tmp/cikti/eksik-paketler.txt
+              if ! apt-cache policy "$p" 2>/dev/null | grep -q 'Candidate: [^(]'; then
+                echo "[KOK-UYARI:PAKET] trixie'de aday yok, atlandi: $p ($f)" | tee -a /tmp/cikti/eksik-paketler.txt
                 sed -i "/^${p}\$/d" "$f"
               fi
             done < "$f"
           done
+          # Kullanılan listelerin son hâli (tanı için)
+          for f in config/package-lists/*.list.chroot; do echo "### $f"; cat "$f"; done > /tmp/cikti/paket-listeleri.txt
+
+      - name: ISO derle
+        run: |
+          cd "$KOK_DIR"
+          ls -la auto
           lb config 2>&1 | tee /tmp/cikti/lb-config.log
           lb build 2>&1 | tee /tmp/cikti/lb-build.log
 

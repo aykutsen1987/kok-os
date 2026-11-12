@@ -12,30 +12,53 @@ jobs:
     container:
       image: debian:trixie
       options: --privileged
+    defaults:
+      run:
+        shell: bash
     steps:
       - name: Araçları kur
         run: |
           apt-get update
           apt-get install -y live-build git zip xz-utils ca-certificates
           lb --version || true
+          df -h /
 
       - uses: actions/checkout@v4
 
+      - name: Dosyaları denetle
+        run: |
+          mkdir -p /tmp/cikti
+          echo "Çalışma klasörü: $PWD"; ls -la
+          CFG=$(find . -path '*/auto/config' | head -1)
+          if [ -z "$CFG" ]; then
+            echo "HATA: auto/config bulunamadı. Dosyalar yanlış yüklenmiş olabilir."
+            find . -maxdepth 3 -not -path './.git/*' | head -60
+            exit 1
+          fi
+          echo "KOK_DIR=$(cd "$(dirname "$(dirname "$CFG")")" && pwd)" >> "$GITHUB_ENV"
+
       - name: ISO derle
         run: |
-          CFG=$(find . -path '*/auto/config' | head -1)
-          cd "$(dirname "$(dirname "$CFG")")"
-          pwd; ls
-          lb config
-          lb build
+          cd "$KOK_DIR"
+          # GitHub web yüklemesi çalıştırma izinlerini siler; geri veriyoruz
+          chmod +x auto/* kok-build-rapor.sh config/hooks/live/* config/includes.chroot/usr/local/bin/* 2>/dev/null || true
+          ls -la auto
+          lb config 2>&1 | tee /tmp/cikti/lb-config.log
+          lb build 2>&1 | tee /tmp/cikti/lb-build.log
+
+      - name: Çıktıları topla
+        if: always()
+        run: |
+          mkdir -p /tmp/cikti
+          cd "${KOK_DIR:-.}" || true
+          cp *.iso kok-build-rapor.txt build.log /tmp/cikti/ 2>/dev/null || true
+          { date; df -h /; ls -la; ls -la auto config 2>&1; } > /tmp/cikti/tani.txt 2>&1
+          ls -la /tmp/cikti
 
       - name: ISO ve raporları yükle
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: kok-os-iso-ve-rapor
-          path: |
-            **/*.iso
-            **/kok-build-rapor.txt
-            **/build.log
+          path: /tmp/cikti
           if-no-files-found: warn

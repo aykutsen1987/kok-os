@@ -18,6 +18,8 @@ jobs:
     steps:
       - name: Araçları kur
         run: |
+          # contrib/non-free/firmware depolarını aç (paket denetimi için)
+          sed -i 's/^Components: main$/Components: main contrib non-free non-free-firmware/' /etc/apt/sources.list.d/debian.sources 2>/dev/null || true
           apt-get update
           apt-get install -y live-build git zip xz-utils ca-certificates
           lb --version || true
@@ -43,6 +45,17 @@ jobs:
           # GitHub web yüklemesi çalıştırma izinlerini siler; geri veriyoruz
           chmod +x auto/* kok-build-rapor.sh config/hooks/live/* config/includes.chroot/usr/local/bin/* 2>/dev/null || true
           ls -la auto
+          # Paket ön denetimi: trixie'de olmayan paketler tek seferde bulunur ve atlanır
+          mkdir -p /tmp/cikti; : > /tmp/cikti/eksik-paketler.txt
+          for f in config/package-lists/*.list.chroot; do
+            while read -r p; do
+              case "$p" in ''|'#'*) continue;; esac
+              if ! apt-cache show "$p" >/dev/null 2>&1; then
+                echo "[KOK-UYARI:PAKET] trixie'de yok, atlandi: $p ($f)" | tee -a /tmp/cikti/eksik-paketler.txt
+                sed -i "/^${p}\$/d" "$f"
+              fi
+            done < "$f"
+          done
           lb config 2>&1 | tee /tmp/cikti/lb-config.log
           lb build 2>&1 | tee /tmp/cikti/lb-build.log
 

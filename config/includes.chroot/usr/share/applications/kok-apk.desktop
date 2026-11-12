@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Android Uygulaması Kur
+Name[tr]=Android Uygulaması Kur
+Comment=.apk dosyasını Android ortamına kurar
+Exec=/usr/local/bin/kok-apk-kur %f
+Icon=waydroid
+Terminal=false
+NoDisplay=true
+MimeType=application/vnd.android.package-archive;

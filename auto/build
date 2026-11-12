@@ -1,0 +1,6 @@
+#!/bin/bash
+# Derler ve ardından kok-build-rapor.txt üretir (başarısız olsa da).
+lb build noauto "${@}" 2>&1 | tee build.log
+SONUC=${PIPESTATUS[0]}
+bash "$(dirname "$0")/../kok-build-rapor.sh" "$SONUC"
+exit $SONUC

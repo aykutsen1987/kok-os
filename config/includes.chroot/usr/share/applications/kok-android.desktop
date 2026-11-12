@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Android
+Name[tr]=Android
+Comment=Android uygulamalarını çalıştırın
+Exec=/usr/local/bin/kok-android-kopru
+Icon=waydroid
+Terminal=false
+Categories=System;

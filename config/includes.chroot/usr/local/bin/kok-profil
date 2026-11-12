@@ -1,0 +1,13 @@
+#!/bin/bash
+# Kök Profil: RAM'e göre hafif/standart profil seçer ve görsel efektleri ayarlar.
+RAM_MB=$(awk '/MemTotal/{print int($2/1024)}' /proc/meminfo)
+if [ "$RAM_MB" -le 2200 ]; then PROFIL=hafif; else PROFIL=standart; fi
+mkdir -p /tmp/kok
+echo "$PROFIL" > /tmp/kok/profil
+if [ "$PROFIL" = "hafif" ]; then
+  xfconf-query -c xfwm4 -p /general/use_compositing -s false 2>/dev/null
+  echo "Kök Profil: Hafif mod etkin (${RAM_MB} MB RAM). Animasyonlar kapatıldı."
+else
+  xfconf-query -c xfwm4 -p /general/use_compositing -s true 2>/dev/null
+  echo "Kök Profil: Standart mod etkin (${RAM_MB} MB RAM)."
+fi

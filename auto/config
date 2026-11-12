@@ -1,0 +1,14 @@
+#!/bin/sh
+set -e
+lb config noauto \
+  --distribution trixie \
+  --architectures amd64 \
+  --archive-areas "main contrib non-free non-free-firmware" \
+  --debian-installer none \
+  --binary-images iso-hybrid \
+  --bootloaders "grub-efi,syslinux" \
+  --iso-application "Kök OS" \
+  --iso-publisher "Kök OS Projesi" \
+  --iso-volume "KOK-OS" \
+  --bootappend-live "boot=live components quiet splash locales=tr_TR.UTF-8 keyboard-layouts=tr timezone=Europe/Istanbul username=kok hostname=kok-os" \
+  "${@}"

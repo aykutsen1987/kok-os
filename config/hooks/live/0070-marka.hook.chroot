@@ -1,0 +1,14 @@
+#!/bin/sh
+KOK_ADIM="A5"; KOK_MOD="marka"
+echo "[KOK:$KOK_ADIM:$KOK_MOD] BASLADI"
+trap 'k=$?; if [ $k -ne 0 ]; then echo "[KOK-HATA:$KOK_ADIM:$KOK_MOD] kod=$k"; else echo "[KOK:$KOK_ADIM:$KOK_MOD] TAMAM"; fi' EXIT
+sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="Kök OS 0.1"/; s/^NAME=.*/NAME="Kök OS"/' /etc/os-release
+echo "Kök OS 0.1 \\n \\l" > /etc/issue
+mkdir -p /etc/kok
+cat > /etc/kok/surum <<EOT
+KOK_SURUM=0.1
+ADIMLAR=2,3,4,5
+TABAN=Debian trixie
+DERLEME_TARIHI=$(date '+%F %T')
+EOT
+exit 0

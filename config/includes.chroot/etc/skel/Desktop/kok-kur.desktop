@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Kök OS'u Kur
+Name[tr]=Kök OS'u Kur
+Comment=Kök OS'u bilgisayarınıza kurun
+Exec=sudo -E calamares
+Icon=/usr/share/kok/kok-logo.png
+Terminal=false

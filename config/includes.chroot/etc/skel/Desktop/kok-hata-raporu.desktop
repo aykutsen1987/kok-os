@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Hata Raporu Oluştur
+Name[tr]=Hata Raporu Oluştur
+Comment=Sorun bildirimi için sistem raporu hazırlar
+Exec=/usr/local/bin/kok-hata-raporu
+Icon=utilities-terminal
+Terminal=false

@@ -1,0 +1,9 @@
+#!/bin/sh
+KOK_ADIM="A4"; KOK_MOD="waydroid"
+echo "[KOK:$KOK_ADIM:$KOK_MOD] BASLADI"
+trap 'k=$?; if [ $k -ne 0 ]; then echo "[KOK-HATA:$KOK_ADIM:$KOK_MOD] kod=$k"; else echo "[KOK:$KOK_ADIM:$KOK_MOD] TAMAM"; fi' EXIT
+apt-get update
+apt-get install -y waydroid || echo "[KOK-UYARI:A4:waydroid] Waydroid paketi kurulamadi"
+apt-get install -y cage || echo "[KOK-UYARI:A4:waydroid] cage paketi kurulamadi"
+systemctl disable waydroid-container.service 2>/dev/null || true
+exit 0

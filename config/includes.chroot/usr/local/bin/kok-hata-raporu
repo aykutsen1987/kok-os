@@ -1,0 +1,63 @@
+#!/bin/bash
+# Kök Hata Raporu: her bölüm hangi ADIMA ait olduğu başlıkta yazar.
+TARIH=$(date +%Y%m%d-%H%M%S)
+CIKTI="$HOME/kok-rapor-$TARIH.txt"
+S=""; sudo -n true 2>/dev/null && S="sudo -n"
+bolum(){ echo; echo "=================================================="; echo "=== $1"; echo "=================================================="; }
+komut(){ echo "\$ $*"; "$@" 2>&1 | tail -n "${SATIR:-60}"; echo; }
+{
+bolum "[GENEL] Sürüm ve donanım"
+cat /etc/kok/surum 2>/dev/null || echo "UYARI: /etc/kok/surum yok (Adım 5 hook'u çalışmamış)"
+komut uname -a
+komut grep PRETTY_NAME /etc/os-release
+komut free -m
+komut bash -c "lscpu | grep -E 'Model name|Flags' | cut -c1-120"
+komut bash -c "lspci -nn | grep -Ei 'vga|3d|network'"
+komut cat /tmp/kok/profil
+komut cat /proc/cmdline
+
+bolum "[ADIM 2] Çekirdek, bellek, yerelleştirme, servisler (hook: 0010, 0020)"
+komut zramctl
+komut swapon --show
+komut sysctl vm.swappiness vm.vfs_cache_pressure
+komut systemctl is-active earlyoom fstrim.timer systemd-timesyncd
+komut systemctl --failed --no-pager
+komut locale
+komut localectl status
+SATIR=80 komut $S journalctl -p 3 -b --no-pager
+SATIR=60 komut $S dmesg -l err,warn
+
+bolum "[ADIM 3] Masaüstü, tema, rıhtım (hook: 0030)"
+komut bash -c "pgrep -a plank; pgrep -a xfwm4; pgrep -a xfce4-panel"
+komut xfconf-query -c xsettings -p /Net/ThemeName
+komut xfconf-query -c xsettings -p /Net/IconThemeName
+komut xfconf-query -c xfwm4 -p /general/use_compositing
+komut bash -c "ls -d /usr/share/themes/WhiteSur* /usr/share/icons/WhiteSur* 2>&1"
+komut bash -c "grep -E '\(EE\)' /var/log/Xorg.0.log ~/.local/share/xorg/Xorg.0.log 2>/dev/null"
+SATIR=40 komut tail -n 40 /var/log/lightdm/lightdm.log
+SATIR=40 komut tail -n 40 ~/.xsession-errors
+
+bolum "[ADIM 4a] Windows uyumluluğu – Wine (hook: 0040, araç: kok-exe-calistir)"
+komut wine --version
+komut dpkg --print-foreign-architectures
+komut ls -la ~/.local/share/kok-wine
+SATIR=80 komut tail -n 80 ~/.local/state/kok/kok-exe-calistir.log
+
+bolum "[ADIM 4b] Android – Waydroid (hook: 0050, araçlar: kok-android-*, kok-apk-kur)"
+komut /usr/local/bin/kok-android-kontrol
+komut bash -c "grep -w binder /proc/filesystems; lsmod | grep -i binder"
+komut waydroid --version
+komut $S waydroid status
+komut systemctl status waydroid-container --no-pager
+SATIR=80 komut $S tail -n 80 /var/lib/waydroid/waydroid.log
+for L in kok-android-kurulum kok-android-kopru kok-apk-kur; do echo "--- $L.log"; tail -n 40 ~/.local/state/kok/$L.log 2>&1; done
+
+bolum "[ADIM 5] Kurulum sihirbazı – Calamares (hook: 0060, 0070)"
+komut bash -c "ls /etc/calamares/branding/kok /etc/calamares/modules 2>&1"
+komut grep -E '^branding' /etc/calamares/settings.conf
+SATIR=150 komut $S bash -c "tail -n 150 /root/.cache/calamares/session.log 2>/dev/null || tail -n 150 ~/.cache/calamares/session.log"
+} > "$CIKTI" 2>&1
+if command -v zenity >/dev/null; then
+  zenity --info --title="Kök OS" --width=420 --text="Rapor hazır:\n$CIKTI\n\nBu dosyanın içeriğini geliştiriciye gönderin." 2>/dev/null
+fi
+echo "$CIKTI"

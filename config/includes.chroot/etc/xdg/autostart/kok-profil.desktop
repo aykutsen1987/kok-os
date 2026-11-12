@@ -1,0 +1,5 @@
+[Desktop Entry]
+Type=Application
+Name=Kök Profil
+Exec=/usr/local/bin/kok-profil
+NoDisplay=true

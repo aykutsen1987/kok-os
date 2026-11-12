@@ -1,0 +1,16 @@
+#!/bin/bash
+mkdir -p "$HOME/.local/state/kok"; exec > >(tee -a "$HOME/.local/state/kok/kok-android-kurulum.log") 2>&1; echo "--- $(date '+%F %T') $0 $*"
+# İlk kurulum: Android görüntüsünü indirir ve hazırlar (yaklaşık 1 GB).
+SEBEP=$(/usr/local/bin/kok-android-kontrol) || { zenity --error --title="Kök Android" --text="$SEBEP" 2>/dev/null; exit 1; }
+if grep -q "boot=live" /proc/cmdline; then
+  zenity --question --title="Kök Android" --width=420 --text="Şu an canlı oturumdasınız. Android bu oturumda kurulur ancak bilgisayarı kapatınca silinir.\n\nİnternetten yaklaşık 1 GB veri indirilecek. Devam edilsin mi?" 2>/dev/null || exit 0
+else
+  zenity --question --title="Kök Android" --width=420 --text="Android ortamı kurulacak. İnternetten yaklaşık 1 GB veri indirilecek. Devam edilsin mi?" 2>/dev/null || exit 0
+fi
+pkexec bash -c 'waydroid init -s VANILLA -f && systemctl enable --now waydroid-container.service' \
+ | zenity --progress --pulsate --auto-close --no-cancel --title="Kök Android" --text="Android hazırlanıyor, lütfen bekleyin…" 2>/dev/null
+if [ -d /var/lib/waydroid/images ] || [ -f /var/lib/waydroid/waydroid.cfg ]; then
+  zenity --info --title="Kök Android" --text="Kurulum tamamlandı. Artık 'Android' uygulamasını ve .apk dosyalarını kullanabilirsiniz." 2>/dev/null
+else
+  zenity --error --title="Kök Android" --text="Kurulum tamamlanamadı. İnternet bağlantınızı kontrol edip tekrar deneyin." 2>/dev/null
+fi

@@ -1,4 +1,5 @@
 zenity
-policykit-1
+polkitd
+pkexec
 cabextract
 wl-clipboard

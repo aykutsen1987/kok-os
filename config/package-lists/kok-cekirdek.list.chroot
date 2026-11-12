@@ -1,7 +1,4 @@
 linux-image-amd64
-live-boot
-live-config
-live-config-systemd
 systemd-zram-generator
 earlyoom
 network-manager
@@ -20,3 +17,12 @@ task-turkish
 sudo
 git
 curl
+systemd-timesyncd
+ca-certificates
+gnupg
+libnotify-bin
+dbus-x11
+xdg-utils
+xfce4-terminal
+virtualbox-guest-utils
+virtualbox-guest-x11

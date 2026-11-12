@@ -1,0 +1,41 @@
+name: Kök OS ISO derle
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+
+jobs:
+  derle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    container:
+      image: debian:trixie
+      options: --privileged
+    steps:
+      - name: Araçları kur
+        run: |
+          apt-get update
+          apt-get install -y live-build git zip xz-utils ca-certificates
+          lb --version || true
+
+      - uses: actions/checkout@v4
+
+      - name: ISO derle
+        run: |
+          CFG=$(find . -path '*/auto/config' | head -1)
+          cd "$(dirname "$(dirname "$CFG")")"
+          pwd; ls
+          lb config
+          lb build
+
+      - name: ISO ve raporları yükle
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kok-os-iso-ve-rapor
+          path: |
+            **/*.iso
+            **/kok-build-rapor.txt
+            **/build.log
+          if-no-files-found: warn

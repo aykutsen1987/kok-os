@@ -1,0 +1,3 @@
+Bu klasöre koyduğunuz .apk dosyaları, Android ortamı ilk kez kurulduğunda
+otomatik olarak yüklenir (önyüklü uygulamalar). Örnek: MoviMeta.apk
+Not: yalnızca kendi geliştirdiğiniz veya dağıtım izni olan uygulamaları koyun.

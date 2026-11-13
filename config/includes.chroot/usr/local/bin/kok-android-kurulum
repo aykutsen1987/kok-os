@@ -7,9 +7,13 @@ if grep -q "boot=live" /proc/cmdline; then
 else
   zenity --question --title="Kök Android" --width=420 --text="Android ortamı kurulacak. İnternetten yaklaşık 1 GB veri indirilecek. Devam edilsin mi?" 2>/dev/null || exit 0
 fi
-pkexec bash -c 'waydroid init -s VANILLA -f && systemctl enable --now waydroid-container.service' \
+TUR=$(zenity --list --radiolist --title="Kök Android" --text="Android sürümünü seçin:" --column="" --column="Seçenek" --column="Kod" --hide-column=3 --print-column=3 TRUE "Standart (Google'sız, önerilir)" VANILLA FALSE "Google Play'li (ek cihaz kaydı gerekir)" GAPPS 2>/dev/null) || exit 0
+[ -z "$TUR" ] && TUR=VANILLA
+echo "Android sürümü: $TUR"
+pkexec bash -c "waydroid init -s $TUR -f && systemctl enable --now waydroid-container.service" \
  | zenity --progress --pulsate --auto-close --no-cancel --title="Kök Android" --text="Android hazırlanıyor, lütfen bekleyin…" 2>/dev/null
 if [ -d /var/lib/waydroid/images ] || [ -f /var/lib/waydroid/waydroid.cfg ]; then
+  /usr/local/bin/kok-android-onyukle
   zenity --info --title="Kök Android" --text="Kurulum tamamlandı. Artık 'Android' uygulamasını ve .apk dosyalarını kullanabilirsiniz." 2>/dev/null
 else
   zenity --error --title="Kök Android" --text="Kurulum tamamlanamadı. İnternet bağlantınızı kontrol edip tekrar deneyin." 2>/dev/null

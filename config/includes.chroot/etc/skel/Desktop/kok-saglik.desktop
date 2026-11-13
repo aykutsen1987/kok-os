@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Sağlık Kontrolü
+Name[tr]=Sağlık Kontrolü
+Comment=Kök OS bileşenlerinin çalışıp çalışmadığını denetler
+Exec=/usr/local/bin/kok-saglik --gui
+Icon=utilities-system-monitor
+Terminal=false
+Categories=System;

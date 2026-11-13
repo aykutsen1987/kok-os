@@ -1,4 +1,4 @@
-# Kök OS – live-build deposu (Adım 2 + 3 + 4 + 5)
+# Kök OS – live-build deposu (Adım 2-8)
 
 ## Gereksinimler
 Debian 12/13 veya Ubuntu çalışan bir bilgisayar (veya sanal makine), ~20 GB boş disk, internet.
@@ -36,3 +36,17 @@ veya VirtualBox: Debian 64-bit, 4 GB RAM, 3D hızlandırma açık.
    Ev klasörünüzde `kok-rapor-TARİH.txt` oluşur. İçeriğini gönderin.
 3. Kurulum sihirbazı (Calamares) hatalarında da aynı raporu alın; kurulum günlüğü içinde.
 4. İz haritası için `KOK-HATA-KODLARI.md` dosyasına bakın.
+
+## Adım 6
+Üst panel (Kök menüsü), rıhtım düzeni, duvar kâğıdı, giriş ekranı ve **Kök Ayarlar** merkezi (Uygulamalar menüsü → Kök Ayarlar).
+
+## Adım 7: Android uygulama kataloğu
+- Menü/rıhtımdaki **Android Uygulamaları** simgesi yayıncı kataloğunu gösterir.
+- Kendi listeniz için `config/includes.chroot/etc/kok/android-katalog.conf` içindeki `KATALOG_URL` alanına JSON adresinizi (https) yazın.
+- Gömülü liste: `config/includes.chroot/usr/share/kok/android-katalog.json`
+- Önyüklü uygulama: APK'yı `config/includes.chroot/usr/share/kok/apk/` içine koyun (Android kurulumundan sonra otomatik yüklenir).
+
+## Adım 8
+- Açılışta **Kök Karşılama** penceresi, masaüstünde **Sağlık Kontrolü** simgesi.
+- Hata raporu en üstte adım adım TAMAM/SORUN özeti verir.
+- Hazır uygulamalar: VLC, Evince, LibreOffice Writer/Calc, Hesap Makinesi, Görev Yöneticisi.

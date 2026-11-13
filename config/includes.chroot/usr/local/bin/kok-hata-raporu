@@ -16,6 +16,9 @@ komut bash -c "lspci -nn | grep -Ei 'vga|3d|network'"
 komut cat /tmp/kok/profil
 komut cat /proc/cmdline
 
+bolum "[SAĞLIK ÖZETİ – adım adım TAMAM/SORUN]"
+/usr/local/bin/kok-saglik 2>&1
+
 bolum "[ADIM 2] Çekirdek, bellek, yerelleştirme, servisler (hook: 0010, 0020)"
 komut zramctl
 komut swapon --show
@@ -56,6 +59,29 @@ bolum "[ADIM 5] Kurulum sihirbazı – Calamares (hook: 0060, 0070)"
 komut bash -c "ls /etc/calamares/branding/kok /etc/calamares/modules 2>&1"
 komut grep -E '^branding' /etc/calamares/settings.conf
 SATIR=150 komut $S bash -c "tail -n 150 /root/.cache/calamares/session.log 2>/dev/null || tail -n 150 ~/.cache/calamares/session.log"
+
+bolum "[ADIM 6] Görünüm, panel, rıhtım, Kök Ayarlar (hook: 0080, araç: kok-ayarlar)"
+komut dconf dump /net/launchpad/plank/
+komut bash -c "ls ~/.config/plank/dock1/launchers ~/.config/xfce4/panel 2>&1"
+komut xfconf-query -c xfce4-panel -p /panels/panel-1/plugin-ids
+SATIR=40 komut tail -n 40 ~/.local/state/kok/kok-ayarlar.log
+komut bash -c "ls /usr/share/applications | grep -iE 'install|calamares|kok'"
+
+bolum "[ADIM 7] Android kataloğu, önyüklü uygulamalar, açılış markası (hook: 0090, 0100; araç: kok-uygulamalar)"
+komut cat /etc/kok/android-katalog.conf
+komut bash -c "python3 -m json.tool /usr/share/kok/android-katalog.json > /dev/null && echo 'gomulu katalog GECERLI'"
+komut bash -c "ls -la /usr/share/kok/apk ~/.cache/kok ~/.cache/kok/apk 2>&1"
+komut bash -c "waydroid app list 2>&1 | grep -E 'Name|packageName'"
+SATIR=40 komut tail -n 40 ~/.local/state/kok/kok-uygulamalar.log
+SATIR=40 komut tail -n 40 ~/.local/state/kok/kok-android-onyukle.log
+SATIR=30 komut tail -n 30 ~/.local/state/kok/kok-android-ac.log
+komut bash -c "cat /proc/cmdline; ls /run/live/medium 2>&1"
+
+bolum "[ADIM 8] Karşılama, sağlık kontrolü, hazır uygulamalar (hook: 0110; araçlar: kok-karsilama, kok-saglik)"
+SATIR=40 komut tail -n 40 ~/.local/state/kok/kok-karsilama.log
+komut bash -c "ls ~/.config/kok 2>&1; ls /etc/xdg/autostart | grep -i kok"
+komut bash -c "for p in vlc evince galculator xfce4-taskmanager soffice; do printf '%s: ' $p; command -v $p || echo YOK; done"
+komut bash -c "du -sh /usr/share/kok 2>&1"
 } > "$CIKTI" 2>&1
 if command -v zenity >/dev/null; then
   zenity --info --title="Kök OS" --width=420 --text="Rapor hazır:\n$CIKTI\n\nBu dosyanın içeriğini geliştiriciye gönderin." 2>/dev/null

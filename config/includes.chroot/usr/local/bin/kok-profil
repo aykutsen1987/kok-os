@@ -2,6 +2,8 @@
 # Kök Profil: RAM'e göre hafif/standart profil seçer ve görsel efektleri ayarlar.
 RAM_MB=$(awk '/MemTotal/{print int($2/1024)}' /proc/meminfo)
 if [ "$RAM_MB" -le 2200 ]; then PROFIL=hafif; else PROFIL=standart; fi
+TERCIH=$(cat "$HOME/.config/kok/profil" 2>/dev/null)
+case "$TERCIH" in hafif|standart) PROFIL="$TERCIH";; esac
 mkdir -p /tmp/kok
 echo "$PROFIL" > /tmp/kok/profil
 if [ "$PROFIL" = "hafif" ]; then

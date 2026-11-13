@@ -1,0 +1,202 @@
+#!/usr/bin/env python3
+# Kök Android Uygulamaları – yayıncı kataloğu
+import gi, os, sys, json, hashlib, threading, subprocess, urllib.request, urllib.parse
+gi.require_version("Gtk", "3.0")
+from gi.repository import Gtk, GLib
+
+LOGDIR = os.path.expanduser("~/.local/state/kok")
+os.makedirs(LOGDIR, exist_ok=True)
+try:
+    sys.stderr = open(os.path.join(LOGDIR, "kok-uygulamalar.log"), "a", buffering=1)
+except Exception:
+    pass
+BIN = "/usr/local/bin"
+KONF = "/etc/kok/android-katalog.conf"
+GOMULU = "/usr/share/kok/android-katalog.json"
+ONBELLEK = os.path.expanduser("~/.cache/kok")
+
+
+def hata(*a):
+    print(*a, file=sys.stderr)
+
+
+def konf_oku():
+    d = {}
+    try:
+        for s in open(KONF, encoding="utf-8"):
+            s = s.strip()
+            if s and not s.startswith("#") and "=" in s:
+                k, v = s.split("=", 1)
+                d[k.strip()] = v.strip()
+    except Exception as e:
+        hata("konf okunamadi", e)
+    return d
+
+
+def kurulu_paketler():
+    try:
+        r = subprocess.run(["waydroid", "app", "list"], capture_output=True, text=True, timeout=15)
+        return {s.split(":", 1)[1].strip() for s in r.stdout.splitlines() if s.strip().startswith("packageName:")}
+    except Exception as e:
+        hata("waydroid app list", e)
+        return set()
+
+
+def katalog_yukle(url):
+    gomulu, uzak, mesaj = [], [], ""
+    try:
+        gomulu = json.load(open(GOMULU, encoding="utf-8")).get("uygulamalar", [])
+    except Exception as e:
+        hata("gomulu katalog", e)
+    onb = os.path.join(ONBELLEK, "katalog.json")
+    if url:
+        if not url.startswith("https://"):
+            mesaj = "Katalog adresi https:// ile başlamalı."
+        else:
+            try:
+                with urllib.request.urlopen(url, timeout=12) as r:
+                    veri = json.loads(r.read().decode("utf-8"))
+                os.makedirs(ONBELLEK, exist_ok=True)
+                json.dump(veri, open(onb, "w", encoding="utf-8"))
+                uzak = veri.get("uygulamalar", [])
+                mesaj = "Katalog internetten güncellendi."
+            except Exception as e:
+                hata("uzak katalog", e)
+                try:
+                    uzak = json.load(open(onb, encoding="utf-8")).get("uygulamalar", [])
+                    mesaj = "İnternete ulaşılamadı, son kaydedilen katalog gösteriliyor."
+                except Exception:
+                    mesaj = "Katalog alınamadı, gömülü liste gösteriliyor."
+    adlar = {u.get("ad") for u in uzak}
+    return uzak + [u for u in gomulu if u.get("ad") not in adlar], mesaj
+
+
+class Pencere(Gtk.Window):
+    def __init__(self):
+        super().__init__(title="Kök Android Uygulamaları")
+        self.set_default_size(560, 560)
+        self.konf = konf_oku()
+        kok = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        kok.set_border_width(12)
+        self.add(kok)
+        b = Gtk.Label(xalign=0)
+        b.set_markup("<big><b>Android Uygulamaları</b></big>\nYayıncı: %s" % GLib.markup_escape_text(self.konf.get("YAYINCI", "")))
+        kok.pack_start(b, False, False, 0)
+        sw = Gtk.ScrolledWindow()
+        sw.set_vexpand(True)
+        self.liste = Gtk.ListBox()
+        self.liste.set_selection_mode(Gtk.SelectionMode.NONE)
+        sw.add(self.liste)
+        kok.pack_start(sw, True, True, 0)
+        self.durum = Gtk.Label(xalign=0)
+        self.durum.set_line_wrap(True)
+        kok.pack_start(self.durum, False, False, 0)
+        alt = Gtk.Box(spacing=6)
+        for ad, fn in (("Yenile", self.yenile), ("Google Play'de Yayıncıyı Aç", self.play_ac), ("APK Dosyasından Kur…", self.apk_sec)):
+            d = Gtk.Button(label=ad)
+            d.connect("clicked", lambda _b, f=fn: f())
+            alt.pack_start(d, True, True, 0)
+        kok.pack_start(alt, False, False, 0)
+        self.yenile()
+
+    def durum_yaz(self, m):
+        self.durum.set_text(m)
+        return False
+
+    def yenile(self):
+        self.durum_yaz("Liste yükleniyor…")
+
+        def is_():
+            liste, mesaj = katalog_yukle(self.konf.get("KATALOG_URL", ""))
+            kurulu = kurulu_paketler()
+            GLib.idle_add(self.doldur, liste, kurulu, mesaj)
+        threading.Thread(target=is_, daemon=True).start()
+
+    def doldur(self, liste, kurulu, mesaj):
+        for c in self.liste.get_children():
+            self.liste.remove(c)
+        for u in liste:
+            self.liste.add(self.satir(u, kurulu))
+        self.liste.show_all()
+        self.durum_yaz(mesaj or ("%d uygulama listelendi." % len(liste)))
+        return False
+
+    def satir(self, u, kurulu):
+        sat = Gtk.ListBoxRow()
+        kut = Gtk.Box(spacing=10)
+        kut.set_border_width(8)
+        sol = Gtk.Label(xalign=0)
+        sol.set_line_wrap(True)
+        sol.set_markup("<b>%s</b>\n%s" % (GLib.markup_escape_text(u.get("ad", "?")), GLib.markup_escape_text(u.get("aciklama", ""))))
+        kut.pack_start(sol, True, True, 0)
+        paket = u.get("paket", "")
+        if paket and paket in kurulu:
+            d = Gtk.Button(label="Aç")
+            d.connect("clicked", lambda _b: subprocess.Popen([BIN + "/kok-android-ac", paket]))
+        elif u.get("apk"):
+            d = Gtk.Button(label="Kur")
+            d.connect("clicked", lambda b, uu=u: self.indir_kur(uu, b))
+        elif u.get("play"):
+            d = Gtk.Button(label="Google Play'de Aç")
+            d.connect("clicked", lambda _b, p=u["play"]: subprocess.Popen(["xdg-open", p]))
+        else:
+            d = Gtk.Label(label="Yakında")
+        kut.pack_start(d, False, False, 0)
+        sat.add(kut)
+        return sat
+
+    def indir_kur(self, u, dugme):
+        url = u.get("apk", "")
+        if not url.startswith("https://"):
+            self.durum_yaz("Güvenlik: yalnızca https:// adresinden indirilir.")
+            return
+        dugme.set_sensitive(False)
+
+        def is_():
+            try:
+                os.makedirs(os.path.join(ONBELLEK, "apk"), exist_ok=True)
+                ad = (u.get("paket") or u.get("ad", "uygulama")).replace("/", "_") + ".apk"
+                hedef = os.path.join(ONBELLEK, "apk", ad)
+                GLib.idle_add(self.durum_yaz, "İndiriliyor: %s …" % u.get("ad", ""))
+                h = hashlib.sha256()
+                with urllib.request.urlopen(url, timeout=30) as r, open(hedef, "wb") as f:
+                    while True:
+                        parca = r.read(1 << 16)
+                        if not parca:
+                            break
+                        f.write(parca)
+                        h.update(parca)
+                beklenen = (u.get("sha256") or "").lower()
+                if beklenen and beklenen != h.hexdigest():
+                    raise ValueError("Dosya doğrulaması başarısız (sha256 uyuşmuyor).")
+                GLib.idle_add(self.durum_yaz, "Kuruluyor: %s …" % u.get("ad", ""))
+                subprocess.Popen([BIN + "/kok-apk-kur", hedef])
+            except Exception as e:
+                hata("indirme", url, e)
+                GLib.idle_add(self.durum_yaz, "Hata: %s" % e)
+            GLib.idle_add(dugme.set_sensitive, True)
+        threading.Thread(target=is_, daemon=True).start()
+
+    def play_ac(self):
+        sorgu = self.konf.get("PLAY_SORGU", "")
+        subprocess.Popen(["xdg-open", "https://play.google.com/store/search?q=%s&c=apps" % urllib.parse.quote(sorgu)])
+
+    def apk_sec(self):
+        d = Gtk.FileChooserDialog(title="APK dosyası seçin", parent=self, action=Gtk.FileChooserAction.OPEN)
+        d.add_buttons("İptal", Gtk.ResponseType.CANCEL, "Seç", Gtk.ResponseType.OK)
+        f = Gtk.FileFilter()
+        f.set_name("APK")
+        f.add_pattern("*.apk")
+        f.add_pattern("*.APK")
+        d.add_filter(f)
+        yol = d.get_filename() if d.run() == Gtk.ResponseType.OK else None
+        d.destroy()
+        if yol:
+            subprocess.Popen([BIN + "/kok-apk-kur", yol])
+
+
+if __name__ == "__main__":
+    p = Pencere()
+    p.connect("destroy", Gtk.main_quit)
+    p.show_all()
+    Gtk.main()

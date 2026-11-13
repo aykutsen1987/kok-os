@@ -1,0 +1,14 @@
+#!/bin/bash
+# Kullanım: kok-android-ac PAKET  – Android uygulamasını açar
+mkdir -p "$HOME/.local/state/kok"; exec > >(tee -a "$HOME/.local/state/kok/kok-android-ac.log") 2>&1; echo "--- $(date '+%F %T') $0 $*"
+PAKET="$1"
+SEBEP=$(/usr/local/bin/kok-android-kontrol) || { zenity --error --title="Kök Android" --text="$SEBEP" 2>/dev/null; exit 1; }
+pkexec systemctl start waydroid-container.service
+waydroid session start >/dev/null 2>&1 &
+sleep 4
+if command -v cage >/dev/null 2>&1; then
+  exec cage -- bash -c 'waydroid show-full-ui & sleep 4; [ -n "$1" ] && waydroid app launch "$1"; wait' _ "$PAKET"
+else
+  waydroid show-full-ui &
+  sleep 4; [ -n "$PAKET" ] && waydroid app launch "$PAKET"
+fi

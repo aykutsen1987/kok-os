@@ -1,0 +1,86 @@
+#!/usr/bin/env python3
+# Kök Karşılama – ilk açılış penceresi
+import gi, os, sys, subprocess
+gi.require_version("Gtk", "3.0")
+from gi.repository import Gtk, GLib
+
+LOGDIR = os.path.expanduser("~/.local/state/kok")
+os.makedirs(LOGDIR, exist_ok=True)
+try:
+    sys.stderr = open(os.path.join(LOGDIR, "kok-karsilama.log"), "a", buffering=1)
+except Exception:
+    pass
+BIN = "/usr/local/bin"
+BAYRAK = os.path.expanduser("~/.config/kok/karsilama-gosterme")
+if "--otomatik" in sys.argv and os.path.exists(BAYRAK):
+    sys.exit(0)
+
+
+def calistir(args):
+    try:
+        subprocess.Popen(args)
+    except Exception as e:
+        print("HATA:", args, e, file=sys.stderr)
+
+
+def canli():
+    try:
+        return "boot=live" in open("/proc/cmdline").read()
+    except Exception:
+        return False
+
+
+class Pencere(Gtk.Window):
+    def __init__(self):
+        super().__init__(title="Kök OS'a Hoş Geldiniz")
+        self.set_default_size(460, 520)
+        self.set_position(Gtk.WindowPosition.CENTER)
+        k = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        k.set_border_width(18)
+        self.add(k)
+        if os.path.exists("/usr/share/kok/kok-logo.png"):
+            k.pack_start(Gtk.Image.new_from_file("/usr/share/kok/kok-logo.png"), False, False, 0)
+        t = Gtk.Label()
+        t.set_markup("<big><b>Kök OS'a hoş geldiniz</b></big>")
+        k.pack_start(t, False, False, 0)
+        try:
+            ram = subprocess.run(["awk", "/MemTotal/{print int($2/1024)}", "/proc/meminfo"], capture_output=True, text=True).stdout.strip()
+            profil = open("/tmp/kok/profil").read().strip()
+        except Exception:
+            ram, profil = "?", "?"
+        b = Gtk.Label(label="Bellek: %s MB   •   Profil: %s\nWindows programlarını (.exe) çift tıklayarak, Android uygulamalarını (.apk) Android kataloğundan çalıştırabilirsiniz." % (ram, profil))
+        b.set_line_wrap(True)
+        k.pack_start(b, False, False, 0)
+        if canli():
+            self.d(k, "Kök OS'u Diske Kur", lambda: calistir(["sudo", "-E", "calamares"]))
+        self.d(k, "Ağ ve Wi-Fi Ayarları", lambda: calistir(["nm-connection-editor"]))
+        self.d(k, "Android Uygulamaları", lambda: calistir([BIN + "/kok-uygulamalar"]))
+        self.d(k, "Kök Ayarlar", lambda: calistir([BIN + "/kok-ayarlar"]))
+        self.d(k, "Sağlık Kontrolü", lambda: calistir([BIN + "/kok-saglik", "--gui"]))
+        self.cb = Gtk.CheckButton(label="Açılışta bir daha gösterme")
+        k.pack_start(self.cb, False, False, 0)
+        self.d(k, "Kapat", self.kapat)
+
+    def d(self, kutu, metin, fn):
+        x = Gtk.Button(label=metin)
+        x.connect("clicked", lambda _b: fn())
+        kutu.pack_start(x, False, False, 0)
+
+    def kapat(self):
+        self.destroy()
+
+
+def cik(*_):
+    try:
+        if p.cb.get_active():
+            os.makedirs(os.path.dirname(BAYRAK), exist_ok=True)
+            open(BAYRAK, "w").write("hayir\n")
+    except Exception as e:
+        print("bayrak", e, file=sys.stderr)
+    Gtk.main_quit()
+
+
+p = Pencere()
+p.connect("destroy", cik)
+p.show_all()
+Gtk.main()

@@ -1,0 +1,13 @@
+#!/bin/sh
+KOK_ADIM="A6"; KOK_MOD="gorunum"
+echo "[KOK:$KOK_ADIM:$KOK_MOD] BASLADI"
+trap 'k=$?; if [ $k -ne 0 ]; then echo "[KOK-HATA:$KOK_ADIM:$KOK_MOD] kod=$k"; else echo "[KOK:$KOK_ADIM:$KOK_MOD] TAMAM"; fi' EXIT
+echo "Kurulum kisayollari:"; ls /usr/share/applications | grep -iE 'install|calamares' || true
+# Debian'ın kendi "Install Debian" kısayolunu gizle (bizimki: Kök OS'u Kur)
+for f in /usr/share/applications/install-debian.desktop /usr/share/applications/calamares-install-debian.desktop; do
+  if [ -f "$f" ]; then sed -i '/^Hidden=/d' "$f"; echo "Hidden=true" >> "$f"; echo "[KOK:A6:gorunum] gizlendi: $f"; fi
+done
+if command -v dconf >/dev/null 2>&1; then dconf update || echo "[KOK-UYARI:A6:gorunum] dconf update basarisiz"; else echo "[KOK-UYARI:A6:gorunum] dconf yok, Plank ayari uygulanamadi"; fi
+update-desktop-database 2>/dev/null || true
+chmod +x /usr/local/bin/kok-* 2>/dev/null || true
+exit 0

@@ -15,3 +15,25 @@
 ## Çalışırken (`kok-rapor-*.txt`)
 Raporun her bölümü başlıkta adımı ve ilgili dosyayı söyler: `[ADIM 2]` bellek/ZRAM/dil, `[ADIM 3]` masaüstü/tema, `[ADIM 4a]` Wine, `[ADIM 4b]` Android, `[ADIM 5]` Calamares.
 Araç günlükleri: `~/.local/state/kok/<araç>.log`.
+
+## Adım 6
+| İşaretçi | Dosya | Anlamı |
+|---|---|---|
+| `[KOK-UYARI:A6:gorunum]` | hooks/live/0080-* | dconf/Plank ayarı uygulanamadı |
+| `[KOK-UYARI:A3:tema]` | hooks/live/0030-* | WhiteSur kurulamadı (build.log'da son 25 satır yazılır) |
+| rapor `[ADIM 6]` | panel, rıhtım, Kök Ayarlar günlüğü | `~/.local/state/kok/kok-ayarlar.log` |
+
+## Adım 7
+| İşaretçi | Dosya | Anlamı |
+|---|---|---|
+| `[KOK:A7:boot-marka]` | hooks/live/0090-*.binary | Açılış menüsü yazıları değişti (yoksa hook çalışmadı) |
+| `[KOK-UYARI:A7:katalog]` | hooks/live/0100-* | Katalog JSON'u geçersiz / Python aracı derlenemedi |
+| `[KOK-HATA:A7:onyukle]` | kok-android-onyukle | Önyüklü APK kurulamadı (günlük: ~/.local/state/kok/kok-android-onyukle.log) |
+| rapor `[ADIM 7]` | katalog ayarı, APK klasörü, kok-uygulamalar günlüğü | |
+
+## Adım 8
+| İşaretçi / bölüm | Dosya | Anlamı |
+|---|---|---|
+| `[KOK-UYARI:A8:karsilama]` | hooks/live/0110-* | Araç eksik veya hazır uygulama kurulmamış |
+| rapor `[SAĞLIK ÖZETİ]` | kok-saglik | Her adım için TAMAM/SORUN listesi: önce buraya bakın |
+| rapor `[ADIM 8]` | kok-karsilama günlüğü, autostart | |

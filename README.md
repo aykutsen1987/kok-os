@@ -1,4 +1,4 @@
-# Kök OS – live-build deposu (Adım 2-8)
+# Kök OS – live-build deposu (Adım 2-12, sürüm 0.5)
 
 ## Gereksinimler
 Debian 12/13 veya Ubuntu çalışan bir bilgisayar (veya sanal makine), ~20 GB boş disk, internet.
@@ -50,3 +50,15 @@ veya VirtualBox: Debian 64-bit, 4 GB RAM, 3D hızlandırma açık.
 - Açılışta **Kök Karşılama** penceresi, masaüstünde **Sağlık Kontrolü** simgesi.
 - Hata raporu en üstte adım adım TAMAM/SORUN özeti verir.
 - Hazır uygulamalar: VLC, Evince, LibreOffice Writer/Calc, Hesap Makinesi, Görev Yöneticisi.
+
+## Adım 9
+Disk zamanlayıcı kuralı, hızlı kapanış, **Performans Özeti** (Kök Ayarlar > Genel), VirtualBox pano desteği, rıhtım kopyalarının giderilmesi.
+
+## Adım 10-12
+- Kök Ayarlar → **Donanım**: ekran döndürme, ekran klavyesi, Bluetooth, Wi-Fi, güç. Panelde pil göstergesi.
+- **Kök Güncelleme** + otomatik güvenlik güncellemesi. Sürüm duyurusu için `config/includes.chroot/etc/kok/guncelleme.conf` içine SURUM_URL yazın.
+- **Kullanım Kılavuzu** (Karşılama ve Ayarlar'dan açılır).
+- Workflow ISO'yu `kok-os-0.5-amd64.iso` adıyla ve `SHA256SUMS.txt` ile yükler.
+
+## Tek rapor
+Masaüstü **Hata Raporu Oluştur** → tüm adımlar (2-12) tek dosyada; en üstte SAĞLIK ÖZETİ ve ADIM TABLOSU.

@@ -1,5 +1,6 @@
 #!/bin/bash
 # Kök Hata Raporu: her bölüm hangi ADIMA ait olduğu başlıkta yazar.
+export PATH=$PATH:/usr/sbin:/sbin
 TARIH=$(date +%Y%m%d-%H%M%S)
 CIKTI="$HOME/kok-rapor-$TARIH.txt"
 S=""; sudo -n true 2>/dev/null && S="sudo -n"
@@ -82,8 +83,36 @@ SATIR=40 komut tail -n 40 ~/.local/state/kok/kok-karsilama.log
 komut bash -c "ls ~/.config/kok 2>&1; ls /etc/xdg/autostart | grep -i kok"
 komut bash -c "for p in vlc evince galculator xfce4-taskmanager soffice; do printf '%s: ' $p; command -v $p || echo YOK; done"
 komut bash -c "du -sh /usr/share/kok 2>&1"
+
+bolum "[ADIM 9] Performans ve sanal makine (araç: kok-performans)"
+SATIR=40 komut /usr/local/bin/kok-performans
+komut bash -c "pgrep -a VBoxClient; lsmod | grep -i vbox; dpkg -l | grep -i virtualbox | cut -c1-80; ls /media"
+komut cat /etc/udev/rules.d/60-kok-disk.rules
+
+bolum "[ADIM 10] Donanım: dokunmatik, döndürme, Wi-Fi, Bluetooth, pil (araç: kok-donder)"
+komut bash -c "xinput list 2>&1 | head -25"
+komut bash -c "ls /sys/bus/iio/devices 2>&1; ls /sys/class/power_supply 2>&1"
+komut bash -c "nmcli device 2>&1; rfkill list 2>&1"
+komut systemctl is-active tlp iio-sensor-proxy bluetooth
+komut cat /etc/X11/xorg.conf.d/40-kok-libinput.conf
+SATIR=30 komut tail -n 30 ~/.local/state/kok/kok-donder.log
+
+bolum "[ADIM 11] Güncelleme (araç: kok-guncelle)"
+komut cat /etc/kok/guncelleme.conf
+komut cat /etc/apt/apt.conf.d/20auto-upgrades
+SATIR=30 komut tail -n 30 ~/.local/state/kok/kok-guncelle.log
+
+bolum "[ADIM 12] Sürüm, kılavuz, genel"
+komut cat /etc/kok/surum
+komut bash -c "ls -la /usr/share/kok; head -3 /etc/os-release"
+komut bash -c "ls ~/.local/state/kok"
 } > "$CIKTI" 2>&1
+PANO=""; PAYLASIM=""
+if command -v xclip >/dev/null && [ -n "$DISPLAY" ]; then xclip -selection clipboard < "$CIKTI" 2>/dev/null && PANO="Rapor panoya kopyalandı (Ctrl+V)."; fi
+for d in /media/sf_* /mnt/rapor; do
+  if [ -d "$d" ] && sudo -n cp "$CIKTI" "$d/" 2>/dev/null; then PAYLASIM="Paylaşılan klasöre de kopyalandı: $d"; fi
+done
 if command -v zenity >/dev/null; then
-  zenity --info --title="Kök OS" --width=420 --text="Rapor hazır:\n$CIKTI\n\nBu dosyanın içeriğini geliştiriciye gönderin." 2>/dev/null
+  zenity --info --title="Kök OS" --width=420 --text="Rapor hazır:\n$CIKTI\n$PANO\n$PAYLASIM\n\nBu dosyanın içeriğini geliştiriciye gönderin." 2>/dev/null
 fi
 echo "$CIKTI"

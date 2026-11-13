@@ -46,6 +46,7 @@ class Pencere(Gtk.Window):
     def __init__(self):
         super().__init__(title="Kök Ayarlar")
         self.set_default_size(520, 440)
+        self.set_position(Gtk.WindowPosition.CENTER)
         self.set_icon_name("preferences-system")
         nb = Gtk.Notebook()
         self.add(nb)
@@ -53,6 +54,7 @@ class Pencere(Gtk.Window):
         nb.append_page(self.gorunum(), Gtk.Label(label="Görünüm"))
         nb.append_page(self.windows(), Gtk.Label(label="Windows"))
         nb.append_page(self.android(), Gtk.Label(label="Android"))
+        nb.append_page(self.donanim(), Gtk.Label(label="Donanım"))
         nb.append_page(self.sistem(), Gtk.Label(label="Sistem"))
 
     def kutu(self):
@@ -103,6 +105,7 @@ class Pencere(Gtk.Window):
         self.combo.set_active(sec)
         b.pack_start(self.combo, False, False, 0)
         self.dugme(b, "Profili Uygula", self.profil_uygula)
+        self.dugme(b, "Performans Özeti", lambda: calistir([BIN + "/kok-performans", "--gui"]))
         return b
 
     def profil_uygula(self):
@@ -193,6 +196,22 @@ class Pencere(Gtk.Window):
         if yol:
             calistir([BIN + "/kok-apk-kur", yol])
 
+    # --- Donanım ---
+    def donanim(self):
+        b = self.kutu()
+        self.etiket(b, "Ekran ve dokunmatik", True)
+        for ad, yon in (("Normal", "normal"), ("Sola Döndür", "left"), ("Sağa Döndür", "right"), ("Ters Çevir", "inverted")):
+            self.dugme(b, ad, lambda y=yon: calistir([BIN + "/kok-donder", y]))
+        self.dugme(b, "Otomatik Döndürmeyi Aç/Kapat", lambda: calistir([BIN + "/kok-donder", "otomatik-degistir"]))
+        self.dugme(b, "Ekran Klavyesi", lambda: calistir(["onboard"]))
+        self.etiket(b, "Bağlantılar ve güç", True)
+        self.dugme(b, "Wi-Fi ve Ağ", lambda: calistir(["nm-connection-editor"]))
+        self.dugme(b, "Bluetooth", lambda: calistir(["blueman-manager"]))
+        self.dugme(b, "Güç Ayarları", lambda: calistir(["xfce4-power-manager-settings"]))
+        sw = Gtk.ScrolledWindow()
+        sw.add(b)
+        return sw
+
     # --- Sistem ---
     def sistem(self):
         b = self.kutu()
@@ -201,7 +220,8 @@ class Pencere(Gtk.Window):
             self.etiket(b, open("/etc/kok/surum").read().strip())
         except Exception:
             self.etiket(b, "Sürüm bilgisi bulunamadı.")
-        self.dugme(b, "Güncellemeleri Denetle ve Kur", self.guncelle)
+        self.dugme(b, "Güncellemeleri Denetle ve Kur", lambda: calistir([BIN + "/kok-guncelle"]))
+        self.dugme(b, "Kullanım Kılavuzu", lambda: calistir(["xdg-open", "/usr/share/kok/kilavuz.html"]))
         self.dugme(b, "Sağlık Kontrolü", lambda: calistir([BIN + "/kok-saglik", "--gui"]))
         self.dugme(b, "Hata Raporu Oluştur", lambda: calistir([BIN + "/kok-hata-raporu"]))
         self.dugme(b, "Kök OS'u Diske Kur", lambda: calistir(["sudo", "-E", "calamares"]))

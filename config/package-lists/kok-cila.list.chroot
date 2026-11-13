@@ -3,3 +3,4 @@ dconf-cli
 python3-gi
 gir1.2-gtk-3.0
 libglib2.0-dev-bin
+xclip

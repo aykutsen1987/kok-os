@@ -37,3 +37,18 @@ Araç günlükleri: `~/.local/state/kok/<araç>.log`.
 | `[KOK-UYARI:A8:karsilama]` | hooks/live/0110-* | Araç eksik veya hazır uygulama kurulmamış |
 | rapor `[SAĞLIK ÖZETİ]` | kok-saglik | Her adım için TAMAM/SORUN listesi: önce buraya bakın |
 | rapor `[ADIM 8]` | kok-karsilama günlüğü, autostart | |
+
+## Adım 9
+| İşaretçi / bölüm | Dosya | Anlamı |
+|---|---|---|
+| `[KOK-UYARI:A9:performans]` | hooks/live/0120-* | Disk kuralı/kapanış ayarı eksik veya VirtualBox paketi kurulmamış |
+| rapor `[ADIM 9]`, `[SAĞLIK ÖZETİ]` | kok-performans, kok-saglik | Boşta RAM, açılış süresi, disk zamanlayıcıları |
+
+## Adım 10-12
+| İşaretçi | Dosya | Anlamı |
+|---|---|---|
+| `[KOK-UYARI:A10:donanim]` | hooks/live/0130-* | Donanım paketi/araç/ayar eksik (iio-sensor-proxy, onboard, blueman, tlp ...) |
+| `[KOK-UYARI:A11:guncelleme]` | hooks/live/0140-* | unattended-upgrades veya güncelleme ayarı eksik |
+| `[KOK-UYARI:A12:surum]` | hooks/live/0150-* | Kılavuz / sürüm dosyası / Python aracı |
+| rapor `[SAĞLIK ÖZETİ]` sonundaki **ADIM TABLOSU** | kok-saglik | Her adım için tamam/sorun sayısı: ilk buraya bakın |
+| rapor `[ADIM 10]..[ADIM 12]` | xinput, iio, nmcli, rfkill, güncelleme günlükleri | |

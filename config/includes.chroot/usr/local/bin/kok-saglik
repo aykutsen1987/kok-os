@@ -1,19 +1,21 @@
 #!/bin/bash
 # Kök Sağlık Kontrolü: her adımın çalışıp çalışmadığını Türkçe özetler.
+export PATH=$PATH:/usr/sbin:/sbin
 mkdir -p /tmp/kok; OUT=/tmp/kok/saglik.txt
 OKS=0; SORUN=0
-ok(){ echo "  [TAMAM]  $1"; OKS=$((OKS+1)); }
-sorun(){ echo "  [SORUN]  $1  -> ilgili: $2"; SORUN=$((SORUN+1)); }
+declare -A TOK TSOR; ORD=(); CUR=""
+ok(){ echo "  [TAMAM]  $1"; OKS=$((OKS+1)); TOK["$CUR"]=$(( ${TOK["$CUR"]:-0} + 1 )); }
+sorun(){ echo "  [SORUN]  $1  -> ilgili: $2"; SORUN=$((SORUN+1)); TSOR["$CUR"]=$(( ${TSOR["$CUR"]:-0} + 1 )); }
 bilgi(){ echo "  [BİLGİ]  $1"; }
-baslik(){ echo; echo "== $1 =="; }
+baslik(){ CUR="$1"; ORD+=("$1"); echo; echo "== $1 =="; }
 kontrol(){ local a="$1" i="$2"; shift 2; if "$@" >/dev/null 2>&1; then ok "$a"; else sorun "$a" "$i"; fi; }
 calistir(){
 echo "Kök Sağlık Kontrolü – $(date '+%F %T')   Profil: $(cat /tmp/kok/profil 2>/dev/null || echo ?)"
 
 baslik "ADIM 2 – Çekirdek, bellek, dil"
-kontrol "ZRAM etkin" "hook 0020, zram-generator.conf" bash -c "zramctl | grep -q zram0"
+kontrol "ZRAM etkin" "hook 0020, zram-generator.conf" bash -c "grep -q zram /proc/swaps"
 kontrol "earlyoom çalışıyor" "paket earlyoom, hook 0020" systemctl is-active --quiet earlyoom
-kontrol "swappiness ayarı (150)" "sysctl.d/99-kok.conf" bash -c '[ "$(sysctl -n vm.swappiness)" = 150 ]'
+kontrol "swappiness ayarı (150)" "sysctl.d/99-kok.conf" bash -c '[ "$(cat /proc/sys/vm/swappiness)" = 150 ]'
 kontrol "Türkçe dil (tr_TR)" "hook 0010" bash -c "locale | grep -q tr_TR"
 kontrol "Türkçe Q klavye" "/etc/default/keyboard" bash -c "setxkbmap -query | grep -q 'layout:.*tr'"
 if timedatectl show -p NTPSynchronized --value 2>/dev/null | grep -q yes; then ok "Saat eşitlendi (NTP)"; else bilgi "Saat henüz eşitlenmedi (internet yoksa normal)"; fi
@@ -59,9 +61,51 @@ baslik "ADIM 8 – Karşılama, sağlık, hazır uygulamalar"
 kontrol "Karşılama aracı geçerli" "kok-karsilama" python3 -c "import ast;ast.parse(open('/usr/local/bin/kok-karsilama').read())"
 for p in vlc evince galculator xfce4-taskmanager soffice; do kontrol "Uygulama kurulu: $p" "kok-uygulamalar.list.chroot" command -v $p; done
 
+baslik "ADIM 9 – Eski donanım performansı"
+kontrol "Disk zamanlayıcı kuralı" "etc/udev/rules.d/60-kok-disk.rules" test -f /etc/udev/rules.d/60-kok-disk.rules
+kontrol "Hızlı kapanış ayarı (10 sn)" "system.conf.d/kok.conf" bash -c "systemctl show -p DefaultTimeoutStopUSec | grep -q '10s'"
+kontrol "Performans aracı" "kok-performans" test -x /usr/local/bin/kok-performans
+bilgi "Açılış: $(systemd-analyze 2>/dev/null | head -1 | cut -c1-90)"
+bilgi "Boşta bellek kullanımı: $(free -m | awk 'NR==2{print $3" MB / "$2" MB"}')"
+
+baslik "ADIM 10 – Donanım, dokunmatik, güç"
+kontrol "Ekran döndürme aracı" "kok-donder" test -x /usr/local/bin/kok-donder
+kontrol "Dokunmatik yüzey ayarı (libinput)" "etc/X11/xorg.conf.d/40-kok-libinput.conf" test -f /etc/X11/xorg.conf.d/40-kok-libinput.conf
+kontrol "Ivmeölçer servisi (iio-sensor-proxy)" "kok-donanim.list" command -v monitor-sensor
+kontrol "Ekran klavyesi (onboard)" "kok-donanim.list" command -v onboard
+kontrol "Bluetooth yönetimi (blueman)" "kok-donanim.list" command -v blueman-manager
+kontrol "Pil yönetimi (TLP)" "kok-donanim.list, tlp.d/10-kok.conf" command -v tlp
+kontrol "Güç yöneticisi" "xfce4-power-manager" command -v xfce4-power-manager-settings
+bilgi "Dokunmatik ekran: $(xinput list 2>/dev/null | grep -ciE 'touchscreen|touch screen') adet (0 ise bu cihazda yok)"
+bilgi "İvmeölçer: $(ls /sys/bus/iio/devices/iio:device*/in_accel_x_raw 2>/dev/null | wc -l) adet"
+bilgi "Pil: $(ls /sys/class/power_supply 2>/dev/null | grep -ci '^BAT') adet"
+bilgi "Wi-Fi adaptörü: $(nmcli -t -f TYPE device 2>/dev/null | grep -c wifi) adet"
+bilgi "Bluetooth: $(rfkill list bluetooth 2>/dev/null | grep -c Bluetooth) adaptör"
+
+baslik "ADIM 11 – Güncelleme"
+kontrol "Kök Güncelleme aracı" "kok-guncelle" test -x /usr/local/bin/kok-guncelle
+kontrol "Otomatik güvenlik güncellemesi ayarı" "apt.conf.d/20auto-upgrades" test -f /etc/apt/apt.conf.d/20auto-upgrades
+kontrol "unattended-upgrades kurulu" "kok-donanim.list" dpkg -s unattended-upgrades
+bilgi "Kök sürüm adresi: $(grep '^SURUM_URL=' /etc/kok/guncelleme.conf 2>/dev/null | cut -d= -f2)"
+
+baslik "ADIM 12 – Kılavuz ve sürüm"
+kontrol "Kullanım kılavuzu" "usr/share/kok/kilavuz.html" test -f /usr/share/kok/kilavuz.html
+kontrol "Sürüm dosyası" "hook 0070" grep -q KOK_SURUM /etc/kok/surum
+bilgi "Kök OS sürümü: $(grep '^KOK_SURUM=' /etc/kok/surum 2>/dev/null | cut -d= -f2)  Adımlar: $(grep '^ADIMLAR=' /etc/kok/surum 2>/dev/null | cut -d= -f2)"
+
+if [ "$(systemd-detect-virt 2>/dev/null)" = "oracle" ]; then
+baslik "VirtualBox entegrasyonu (pano, ekran)"
+kontrol "VirtualBox konuk paketi kurulu" "kok-cekirdek/kok-cila listesi (virtualbox-guest-x11)" bash -c "dpkg -s virtualbox-guest-x11 >/dev/null 2>&1"
+kontrol "vboxguest çekirdek modülü" "çekirdek" bash -c "lsmod | grep -q vboxguest"
+kontrol "VBoxClient (pano) çalışıyor" "autostart/kok-vm-pano.desktop" pgrep -f VBoxClient
+bilgi "Pano için VirtualBox menüsü: Aygıtlar > Paylaşılan Pano > Çift Yönlü"
+fi
+
 baslik "Ağ"
 if ping -c1 -W2 1.1.1.1 >/dev/null 2>&1; then ok "İnternet bağlantısı var"; else sorun "İnternet bağlantısı yok" "NetworkManager / VM ağ ayarı"; fi
 
+echo; echo "== ADIM TABLOSU (nereye bakacağınızı gösterir) =="
+for a in "${ORD[@]}"; do printf "  %-50s tamam:%s  sorun:%s\n" "$a" "${TOK["$a"]:-0}" "${TSOR["$a"]:-0}"; done
 echo
 echo "ÖZET: $OKS tamam, $SORUN sorun. (BİLGİ satırları hata değildir)"
 }

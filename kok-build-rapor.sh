@@ -30,10 +30,8 @@ tail -n 60 "$LOG" | sed 's/^/  /'
 echo
 echo "=== 5) Tanı ipucu ==="
 grep -q 'Unable to locate package' "$LOG" && echo "  -> Bir paket adı Debian trixie'de yok: paket listelerini (config/package-lists/) kontrol et."
-grep -q 'KOK-HATA:A4' "$LOG" && echo "  -> Adım 4 (Wine/Waydroid hook) hatası."
-grep -q 'KOK-HATA:A3' "$LOG" && echo "  -> Adım 3 (tema) hook hatası."
-grep -q 'KOK-HATA:A5' "$LOG" && echo "  -> Adım 5 (Calamares/marka) hook hatası."
-grep -q 'KOK-HATA:A2' "$LOG" && echo "  -> Adım 2 (yerelleştirme/servis) hook hatası."
+for A in A2 A3 A4 A5 A6 A7 A8 A9 A10 A11 A12; do grep -q "KOK-HATA:$A:" "$LOG" && echo "  -> Adım ${A#A} hook hatası (KOK-HATA:$A)."; done
+grep -c 'KOK-UYARI' "$LOG" | sed 's/^/  -> Toplam uyarı sayısı: /'
 grep -qE 'Temporary failure|Could not resolve' "$LOG" && echo "  -> İnternet/DNS sorunu."
 grep -qE 'No space left' "$LOG" && echo "  -> Disk doldu."
 } > "$OUT"

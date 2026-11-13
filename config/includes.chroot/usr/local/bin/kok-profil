@@ -7,9 +7,11 @@ case "$TERCIH" in hafif|standart) PROFIL="$TERCIH";; esac
 mkdir -p /tmp/kok
 echo "$PROFIL" > /tmp/kok/profil
 if [ "$PROFIL" = "hafif" ]; then
+  command -v dconf >/dev/null && dconf write /net/launchpad/plank/docks/dock1/icon-size 40 2>/dev/null
   xfconf-query -c xfwm4 -p /general/use_compositing -s false 2>/dev/null
   echo "Kök Profil: Hafif mod etkin (${RAM_MB} MB RAM). Animasyonlar kapatıldı."
 else
+  command -v dconf >/dev/null && dconf write /net/launchpad/plank/docks/dock1/icon-size 48 2>/dev/null
   xfconf-query -c xfwm4 -p /general/use_compositing -s true 2>/dev/null
   echo "Kök Profil: Standart mod etkin (${RAM_MB} MB RAM)."
 fi

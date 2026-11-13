@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Kök Güncelleme
+Name[tr]=Kök Güncelleme
+Comment=Sistem ve Kök OS güncellemelerini denetler
+Exec=/usr/local/bin/kok-guncelle
+Icon=system-software-update
+Terminal=false
+Categories=System;Settings;

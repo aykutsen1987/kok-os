@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Kullanım Kılavuzu
+Name[tr]=Kullanım Kılavuzu
+Exec=xdg-open /usr/share/kok/kilavuz.html
+Icon=help-browser
+Terminal=false
+Categories=System;Documentation;

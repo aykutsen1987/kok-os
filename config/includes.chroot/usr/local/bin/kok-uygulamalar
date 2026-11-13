@@ -75,6 +75,7 @@ class Pencere(Gtk.Window):
     def __init__(self):
         super().__init__(title="Kök Android Uygulamaları")
         self.set_default_size(560, 560)
+        self.set_position(Gtk.WindowPosition.CENTER)
         self.konf = konf_oku()
         kok = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         kok.set_border_width(12)

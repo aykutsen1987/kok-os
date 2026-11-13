@@ -6,3 +6,4 @@ theme='Transparent'
 position='bottom'
 alignment='center'
 items-alignment='center'
+dock-items=['thunar.dockitem','firefox-esr.dockitem','vlc.dockitem','kok-uygulamalar.dockitem','mousepad.dockitem','xfce4-terminal.dockitem','kok-ayarlar.dockitem']

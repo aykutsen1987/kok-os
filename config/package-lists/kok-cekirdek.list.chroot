@@ -24,5 +24,3 @@ libnotify-bin
 dbus-x11
 xdg-utils
 xfce4-terminal
-virtualbox-guest-utils
-virtualbox-guest-x11

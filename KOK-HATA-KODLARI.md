@@ -67,3 +67,14 @@ Not: GitHub web yüklemesi nokta ile başlayan klasörleri atlar. Bu yüzden kul
 | `[KOK-UYARI:A13:kimlik]` | hooks/live/0160-* | picom/en_US/sözlük/katalog/i düğmesi eksik |
 | rapor `[ADIM 13]` | picom.log, kok-hakkinda.log, kok-dil.log | |
 | `picom çalışıyor` SORUN | kok-profil, picom.conf | Yuvarlak köşeler çalışmıyor: Ayarlar → Görünüm'den kapatılabilir |
+
+## Parola / giriş ekranı (0.7.1)
+| Belirti | Sebep / dosya |
+|---|---|
+| Giriş ekranı (kullanıcı adı/parola) çıkıyor | Oturum kapatıldı. Canlı oturumda dil değişimi artık oturumu yeniden başlatır (kok-dil). Otomatik giriş: lightdm.conf.d/50-kok.conf |
+| Parola penceresi (Authentication required) | pkexec çağrısı. Canlı oturumda polkit kuralı (49-kok-canli.rules) ve kok-yetkili parolasız çalıştırır |
+| Canlı oturum parolası gerekirse | kullanıcı: kok, parola: live |
+
+## Açılışta giriş ekranı (otomatik giriş çalışmazsa)
+Giriş ekranında kullanıcı: **kok** (parola boş bırakılabilir; olmazsa: **live**). Giriş yapıp **Hata Raporu Oluştur** çalıştırın:
+rapordaki **[GIRIS TANISI]** bölümü lightdm günlüğünü, kullanıcı gruplarını ve oturum hatalarını içerir.

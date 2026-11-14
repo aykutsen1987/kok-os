@@ -10,5 +10,5 @@ lb config noauto \
   --iso-application "Kök OS" \
   --iso-publisher "Kök OS Projesi" \
   --iso-volume "KOK-OS" \
-  --bootappend-live "boot=live components quiet splash locales=tr_TR.UTF-8 keyboard-layouts=tr timezone=Europe/Istanbul username=kok live-config.user-fullname=Kök live-config.user-default-groups=audio,cdrom,dip,floppy,video,plugdev,netdev,bluetooth,vboxsf hostname=kok-os" \
+  --bootappend-live "boot=live components quiet splash locales=tr_TR.UTF-8 keyboard-layouts=tr timezone=Europe/Istanbul username=kok live-config.user-fullname=Kök hostname=kok-os" \
   "${@}"

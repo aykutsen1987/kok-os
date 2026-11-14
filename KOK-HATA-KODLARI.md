@@ -76,5 +76,5 @@ Not: GitHub web yüklemesi nokta ile başlayan klasörleri atlar. Bu yüzden kul
 | Canlı oturum parolası gerekirse | kullanıcı: kok, parola: live |
 
 ## Açılışta giriş ekranı (otomatik giriş çalışmazsa)
-Giriş ekranında kullanıcı: **kok** (parola boş bırakılabilir; olmazsa: **live**). Giriş yapıp **Hata Raporu Oluştur** çalıştırın:
+Giriş ekranında kullanıcı: **kok**, parola: **live**. Giriş yapıp **Hata Raporu Oluştur** çalıştırın:
 rapordaki **[GIRIS TANISI]** bölümü lightdm günlüğünü, kullanıcı gruplarını ve oturum hatalarını içerir.

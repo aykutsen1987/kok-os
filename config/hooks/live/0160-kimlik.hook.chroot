@@ -9,4 +9,5 @@ locale -a | grep -qi en_US && echo "[KOK:A13:kimlik] en_US yerel ayari var" || e
 python3 -c "import sys,json;sys.path.insert(0,'/usr/local/lib/kok');import kok_i18n;json.load(open('/usr/share/kok/ceviri-en.json'));print('[KOK:A13:kimlik] ceviri sozlugu gecerli')" || echo "[KOK-UYARI:A13:kimlik] ceviri sozlugu hatali"
 python3 -c "import json;json.load(open('/usr/share/kok/android-katalog.json'));print('[KOK:A13:kimlik] katalog gecerli')" || echo "[KOK-UYARI:A13:kimlik] katalog hatali"
 [ -f /usr/share/kok/skel-config/xfce4/panel/launcher-10/kok-hakkinda.desktop ] && echo "[KOK:A13:kimlik] i dugmesi dosyasi var" || echo "[KOK-UYARI:A13:kimlik] i dugmesi dosyasi yok"
+systemctl enable kok-canli-parola.service 2>/dev/null && echo "[KOK:A13:kimlik] canli parola servisi etkin" || echo "[KOK-UYARI:A13:kimlik] canli parola servisi etkinlestirilemedi"
 exit 0

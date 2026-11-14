@@ -52,3 +52,18 @@ Araç günlükleri: `~/.local/state/kok/<araç>.log`.
 | `[KOK-UYARI:A12:surum]` | hooks/live/0150-* | Kılavuz / sürüm dosyası / Python aracı |
 | rapor `[SAĞLIK ÖZETİ]` sonundaki **ADIM TABLOSU** | kok-saglik | Her adım için tamam/sorun sayısı: ilk buraya bakın |
 | rapor `[ADIM 10]..[ADIM 12]` | xinput, iio, nmcli, rfkill, güncelleme günlükleri | |
+
+## 0.6 ince ayar
+| İşaretçi | Dosya | Anlamı |
+|---|---|---|
+| `[KOK-UYARI:A6:skel]` / `[KOK-UYARI:A12:son]` | hooks 0085, 0999 | Rıhtım/menü ayarları (skel-config) kopyalanamadı |
+| `[KOK:A9:vbox]` `[KOK-UYARI:A9:vbox]` | hooks/live/0125-vbox | VirtualBox Guest Additions (pano) kurulumu |
+| `eksik kutuphane:` | 0125-vbox | VBoxClient için eksik .so (pano çalışmaz) |
+Not: GitHub web yüklemesi nokta ile başlayan klasörleri atlar. Bu yüzden kullanıcı ayarları `usr/share/kok/skel-config` içinde tutulur ve hook ile /etc/skel/.config'e kopyalanır.
+
+## Adım 13
+| İşaretçi / bölüm | Dosya | Anlamı |
+|---|---|---|
+| `[KOK-UYARI:A13:kimlik]` | hooks/live/0160-* | picom/en_US/sözlük/katalog/i düğmesi eksik |
+| rapor `[ADIM 13]` | picom.log, kok-hakkinda.log, kok-dil.log | |
+| `picom çalışıyor` SORUN | kok-profil, picom.conf | Yuvarlak köşeler çalışmıyor: Ayarlar → Görünüm'den kapatılabilir |

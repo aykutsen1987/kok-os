@@ -1,4 +1,4 @@
-# Kök OS – live-build deposu (Adım 2-12, sürüm 0.5)
+# Kök OS – live-build deposu (Adım 2-13, sürüm 0.7)
 
 ## Gereksinimler
 Debian 12/13 veya Ubuntu çalışan bir bilgisayar (veya sanal makine), ~20 GB boş disk, internet.
@@ -62,3 +62,10 @@ Disk zamanlayıcı kuralı, hızlı kapanış, **Performans Özeti** (Kök Ayarl
 
 ## Tek rapor
 Masaüstü **Hata Raporu Oluştur** → tüm adımlar (2-12) tek dosyada; en üstte SAĞLIK ÖZETİ ve ADIM TABLOSU.
+
+## Adım 13
+- Panelde ve masaüstünde **"i"** düğmesi: sürüm, geliştirici (@aykutsen1987 tıklanınca diyalog), YouTube ve Play Store.
+- **Dil:** Kurulumda Calamares'ten, sonradan Kök Ayarlar → Dil'den Türkçe/English.
+- **Android Uygulamaları:** `usr/share/kok/android-katalog.json` (ad, açıklama, Play bağlantısı, simge, öneri).
+- **Yuvarlak köşeler** (picom): Standart profilde açık, Kök Ayarlar → Görünüm'den kapatılabilir.
+- **GitHub:** derleme raporu Actions çalıştırma sayfasında görünür. Cihazdan göndermek için `etc/kok/geri-bildirim.conf` içine GITHUB_DEPO yazın.

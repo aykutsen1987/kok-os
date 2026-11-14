@@ -4,6 +4,7 @@ echo "[KOK:$KOK_ADIM:$KOK_MOD] BASLADI"
 trap 'k=$?; if [ $k -ne 0 ]; then echo "[KOK-HATA:$KOK_ADIM:$KOK_MOD] kod=$k"; else echo "[KOK:$KOK_ADIM:$KOK_MOD] TAMAM"; fi' EXIT
 set -e
 sed -i 's/^# *tr_TR.UTF-8 UTF-8/tr_TR.UTF-8 UTF-8/' /etc/locale.gen
+sed -i 's/^# *en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen
 locale-gen
 update-locale LANG=tr_TR.UTF-8
 ln -sf /usr/share/zoneinfo/Europe/Istanbul /etc/localtime

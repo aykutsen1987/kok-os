@@ -1,0 +1,33 @@
+#!/bin/sh
+KOK_ADIM="A9"; KOK_MOD="vbox"
+echo "[KOK:$KOK_ADIM:$KOK_MOD] BASLADI"
+trap 'k=$?; if [ $k -ne 0 ]; then echo "[KOK-HATA:$KOK_ADIM:$KOK_MOD] kod=$k"; else echo "[KOK:$KOK_ADIM:$KOK_MOD] TAMAM"; fi' EXIT
+groupadd -f vboxsf; groupadd -f vboxuser
+V=7.2.2
+mkdir -p /tmp/vbx && cd /tmp/vbx
+ISO=""
+if curl -fL --max-time 600 -o vbga.iso "https://download.virtualbox.org/virtualbox/$V/VBoxGuestAdditions_$V.iso"; then
+  ISO=/tmp/vbx/vbga.iso
+else
+  echo "[KOK-UYARI:A9:vbox] Oracle ISO indirilemedi, Debian paketi denenecek"
+  apt-get install -y virtualbox-guest-additions-iso && ISO=/usr/share/virtualbox/VBoxGuestAdditions.iso
+fi
+if [ -z "$ISO" ] || [ ! -f "$ISO" ]; then echo "[KOK-UYARI:A9:vbox] Guest Additions ISO bulunamadi"; exit 0; fi
+apt-get install -y libarchive-tools bzip2 >/dev/null 2>&1 || true
+if ! bsdtar -xf "$ISO" -C /tmp/vbx VBoxLinuxAdditions.run; then echo "[KOK-UYARI:A9:vbox] ISO acilamadi"; exit 0; fi
+sh /tmp/vbx/VBoxLinuxAdditions.run --noexec --target /tmp/vbx/x >/dev/null 2>&1 || echo "[KOK-UYARI:A9:vbox] .run acilamadi"
+TAR=$(ls /tmp/vbx/x/VBoxGuestAdditions-amd64.tar.* 2>/dev/null | head -1)
+if [ -z "$TAR" ]; then echo "[KOK-UYARI:A9:vbox] amd64 arsivi yok"; ls /tmp/vbx/x 2>&1 | head; exit 0; fi
+mkdir -p /opt/VBoxGuestAdditions && tar -xf "$TAR" -C /opt/VBoxGuestAdditions
+CL=$(find /opt/VBoxGuestAdditions -name VBoxClient -type f | head -1)
+CT=$(find /opt/VBoxGuestAdditions -name VBoxControl -type f | head -1)
+[ -n "$CL" ] && ln -sf "$CL" /usr/bin/VBoxClient
+[ -n "$CT" ] && ln -sf "$CT" /usr/bin/VBoxControl
+if [ -n "$CL" ]; then
+  echo "[KOK:A9:vbox] VBoxClient kuruldu: $CL"
+  ldd "$CL" 2>&1 | grep 'not found' | sed 's/^/[KOK-UYARI:A9:vbox] eksik kutuphane: /' || true
+else
+  echo "[KOK-UYARI:A9:vbox] VBoxClient bulunamadi"
+fi
+rm -rf /tmp/vbx
+exit 0

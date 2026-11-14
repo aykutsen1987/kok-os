@@ -15,6 +15,7 @@ komut free -m
 komut bash -c "lscpu | grep -E 'Model name|Flags' | cut -c1-120"
 komut bash -c "lspci -nn | grep -Ei 'vga|3d|network'"
 komut cat /tmp/kok/profil
+komut id
 komut cat /proc/cmdline
 
 bolum "[SAĞLIK ÖZETİ – adım adım TAMAM/SORUN]"
@@ -38,7 +39,7 @@ komut xfconf-query -c xsettings -p /Net/IconThemeName
 komut xfconf-query -c xfwm4 -p /general/use_compositing
 komut bash -c "ls -d /usr/share/themes/WhiteSur* /usr/share/icons/WhiteSur* 2>&1"
 komut bash -c "grep -E '\(EE\)' /var/log/Xorg.0.log ~/.local/share/xorg/Xorg.0.log 2>/dev/null"
-SATIR=40 komut tail -n 40 /var/log/lightdm/lightdm.log
+SATIR=40 komut $S tail -n 40 /var/log/lightdm/lightdm.log
 SATIR=40 komut tail -n 40 ~/.xsession-errors
 
 bolum "[ADIM 4a] Windows uyumluluğu – Wine (hook: 0040, araç: kok-exe-calistir)"
@@ -65,6 +66,8 @@ bolum "[ADIM 6] Görünüm, panel, rıhtım, Kök Ayarlar (hook: 0080, araç: ko
 komut dconf dump /net/launchpad/plank/
 komut bash -c "ls ~/.config/plank/dock1/launchers ~/.config/xfce4/panel 2>&1"
 komut xfconf-query -c xfce4-panel -p /panels/panel-1/plugin-ids
+SATIR=30 komut tail -n 30 /usr/share/kok/whitesur-gtk.log
+komut bash -c "ls -la /etc/skel/.config 2>&1; ls /usr/share/kok/skel-config 2>&1"
 SATIR=40 komut tail -n 40 ~/.local/state/kok/kok-ayarlar.log
 komut bash -c "ls /usr/share/applications | grep -iE 'install|calamares|kok'"
 
@@ -106,13 +109,23 @@ bolum "[ADIM 12] Sürüm, kılavuz, genel"
 komut cat /etc/kok/surum
 komut bash -c "ls -la /usr/share/kok; head -3 /etc/os-release"
 komut bash -c "ls ~/.local/state/kok"
+
+bolum "[ADIM 13] Kimlik, dil, katalog, yuvarlak köşeler (araçlar: kok-hakkinda, kok-dil, kok-uygulamalar, picom)"
+komut bash -c "cat /etc/default/locale; locale -a | head -8; echo LANG=$LANG"
+komut bash -c "pgrep -a picom; ls -la ~/.config/kok 2>&1"
+SATIR=30 komut tail -n 30 ~/.local/state/kok/picom.log
+SATIR=30 komut tail -n 30 ~/.local/state/kok/kok-hakkinda.log
+SATIR=30 komut tail -n 30 ~/.local/state/kok/kok-dil.log
+komut cat /etc/kok/android-katalog.conf
+komut bash -c "ls ~/.config/xfce4/panel/launcher-10 ~/Desktop 2>&1"
+komut cat /etc/kok/geri-bildirim.conf
 } > "$CIKTI" 2>&1
 PANO=""; PAYLASIM=""
 if command -v xclip >/dev/null && [ -n "$DISPLAY" ]; then xclip -selection clipboard < "$CIKTI" 2>/dev/null && PANO="Rapor panoya kopyalandı (Ctrl+V)."; fi
 for d in /media/sf_* /mnt/rapor; do
   if [ -d "$d" ] && sudo -n cp "$CIKTI" "$d/" 2>/dev/null; then PAYLASIM="Paylaşılan klasöre de kopyalandı: $d"; fi
 done
-if command -v zenity >/dev/null; then
+if [ -z "$KOK_SESSIZ" ] && command -v zenity >/dev/null; then
   zenity --info --title="Kök OS" --width=420 --text="Rapor hazır:\n$CIKTI\n$PANO\n$PAYLASIM\n\nBu dosyanın içeriğini geliştiriciye gönderin." 2>/dev/null
 fi
 echo "$CIKTI"

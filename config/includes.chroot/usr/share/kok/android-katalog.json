@@ -1,13 +1,18 @@
 {
   "yayinci": "@aykutsen1987",
+  "play_yayinci": "https://play.google.com/store/search?q=pub%3A%20%40aykutsen1987&c=apps",
+  "youtube": "https://www.youtube.com/@aykutsen1987",
   "uygulamalar": [
     {
       "ad": "MoviMeta",
       "aciklama": "Video izleme uygulaması",
+      "aciklama_en": "Video watching app",
       "paket": "",
+      "play": "https://play.google.com/store/search?q=pub%3A%20%40aykutsen1987&c=apps",
       "apk": "",
       "sha256": "",
-      "play": ""
+      "ikon": "",
+      "oner": true
     }
   ]
 }

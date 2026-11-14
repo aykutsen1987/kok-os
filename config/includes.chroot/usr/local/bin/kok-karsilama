@@ -3,6 +3,8 @@
 import gi, os, sys, subprocess
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk, GLib
+sys.path.insert(0, "/usr/local/lib/kok")
+from kok_i18n import T, agac, kilavuz
 
 LOGDIR = os.path.expanduser("~/.local/state/kok")
 os.makedirs(LOGDIR, exist_ok=True)
@@ -33,9 +35,9 @@ def canli():
 class Pencere(Gtk.Window):
     def __init__(self):
         super().__init__(title="Kök OS'a Hoş Geldiniz")
-        self.set_default_size(460, 600)
+        self.set_default_size(460, 660)
         self.set_position(Gtk.WindowPosition.CENTER)
-        k = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        k = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         k.set_border_width(18)
         self.add(k)
         if os.path.exists("/usr/share/kok/kok-logo.png"):
@@ -51,24 +53,24 @@ class Pencere(Gtk.Window):
         b = Gtk.Label(label="Bellek: %s MB   •   Profil: %s\nWindows programlarını (.exe) çift tıklayarak, Android uygulamalarını (.apk) Android kataloğundan çalıştırabilirsiniz." % (ram, profil))
         b.set_line_wrap(True)
         k.pack_start(b, False, False, 0)
+        self.d(k, "Dil / Language", lambda: calistir([BIN + "/kok-ayarlar", "--sekme", "dil"]))
         if canli():
             self.d(k, "Kök OS'u Diske Kur", lambda: calistir(["sudo", "-E", "calamares"]))
         self.d(k, "Ağ ve Wi-Fi Ayarları", lambda: calistir(["nm-connection-editor"]))
         self.d(k, "Android Uygulamaları", lambda: calistir([BIN + "/kok-uygulamalar"]))
         self.d(k, "Kök Ayarlar", lambda: calistir([BIN + "/kok-ayarlar"]))
-        self.d(k, "Kullanım Kılavuzu", lambda: calistir(["xdg-open", "/usr/share/kok/kilavuz.html"]))
+        self.d(k, "Kullanım Kılavuzu", lambda: calistir(["xdg-open", kilavuz()]))
         self.d(k, "Sağlık Kontrolü", lambda: calistir([BIN + "/kok-saglik", "--gui"]))
+        self.d(k, "Kök OS Hakkında", lambda: calistir([BIN + "/kok-hakkinda"]))
         self.cb = Gtk.CheckButton(label="Açılışta bir daha gösterme")
         k.pack_start(self.cb, False, False, 0)
-        self.d(k, "Kapat", self.kapat)
+        self.d(k, "Kapat", self.destroy)
+        agac(self)
 
     def d(self, kutu, metin, fn):
         x = Gtk.Button(label=metin)
         x.connect("clicked", lambda _b: fn())
         kutu.pack_start(x, False, False, 0)
-
-    def kapat(self):
-        self.destroy()
 
 
 def cik(*_):

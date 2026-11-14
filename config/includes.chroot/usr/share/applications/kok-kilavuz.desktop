@@ -2,7 +2,8 @@
 Type=Application
 Name=Kullanım Kılavuzu
 Name[tr]=Kullanım Kılavuzu
-Exec=xdg-open /usr/share/kok/kilavuz.html
+Name[en]=User Guide
+Exec=sh -c 'f=/usr/share/kok/kilavuz.html; case "${LANG:-tr}" in en*) f=/usr/share/kok/kilavuz-en.html;; esac; exec xdg-open "$f"'
 Icon=help-browser
 Terminal=false
 Categories=System;Documentation;

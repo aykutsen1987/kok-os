@@ -1,0 +1,14 @@
+#!/bin/bash
+# Kullanım: kok-dil tr|en [klavye]
+mkdir -p "$HOME/.local/state/kok"; exec > >(tee -a "$HOME/.local/state/kok/kok-dil.log") 2>&1; echo "--- $(date '+%F %T') $0 $*"
+case "$1" in tr|en) ;; *) echo "Kullanım: kok-dil tr|en [klavye]"; exit 1;; esac
+SU="sudo -n"; sudo -n true 2>/dev/null || SU=pkexec
+if $SU /usr/local/sbin/kok-dil-uygula "$1" "$2"; then
+  NOT=""
+  grep -q "boot=live" /proc/cmdline && NOT="\n\nCanlı oturumda giriş ekranı gelirse kullanıcı: kok, parola: live"
+  # Bildirim metni hedef dilde gösterilsin
+  if [ "$1" = "en" ]; then export LANG=en_US.UTF-8; else export LANG=tr_TR.UTF-8; fi
+  zenity --question --title="Kök OS" --width=420 --text="Dil değişikliğinin uygulanması için oturumun kapatılıp yeniden açılması gerekir. Şimdi oturum kapatılsın mı?$NOT" 2>/dev/null && xfce4-session-logout --logout
+else
+  zenity --error --title="Kök OS" --text="Dil değiştirilemedi." 2>/dev/null
+fi

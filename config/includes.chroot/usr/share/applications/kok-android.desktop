@@ -2,8 +2,10 @@
 Type=Application
 Name=Android
 Name[tr]=Android
+Name[en]=Android
 Comment=Android uygulamalarını çalıştırın
 Exec=/usr/local/bin/kok-android-kopru
 Icon=waydroid
 Terminal=false
 Categories=System;
+Comment[en]=Run Android apps

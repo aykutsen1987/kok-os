@@ -48,7 +48,10 @@ kontrol "Duvar kâğıdı dosyası" "usr/share/backgrounds/kok" test -f /usr/sha
 kontrol "Panel yapılandırması" "xfce4-panel.xml" test -f /etc/xdg/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml
 kontrol "Rıhtım büyütme kapalı (dconf)" "dconf/00-kok, hook 0080" bash -c "dconf read /net/launchpad/plank/docks/dock1/zoom-enabled | grep -q false"
 kontrol "Kök Ayarlar kod olarak geçerli" "kok-ayarlar" python3 -c "import ast;ast.parse(open('/usr/local/bin/kok-ayarlar').read())"
-if grep -qs '^Hidden=true' /usr/share/applications/install-debian.desktop || [ ! -f /usr/share/applications/install-debian.desktop ]; then ok "'Install Debian' kısayolu gizli"; else sorun "'Install Debian' kısayolu görünür" "hook 0080"; fi
+kontrol "Rıhtım başlatıcıları kullanıcıya kopyalandı" "hook 0085-skel (skel-config)" test -f "$HOME/.config/plank/dock1/launchers/kok-ayarlar.dockitem"
+kontrol "Kök menü ayarı kullanıcıya kopyalandı" "hook 0085-skel (skel-config)" test -f "$HOME/.config/xfce4/panel/whiskermenu-1.rc"
+GIZLI=1; for f in install-debian calamares-install-debian; do [ -f /usr/share/applications/$f.desktop ] && ! grep -qs "^Hidden=true" /usr/share/applications/$f.desktop && GIZLI=0; done
+if [ $GIZLI = 1 ]; then ok "'Install Debian' kısayolu gizli"; else sorun "'Install Debian' kısayolu görünür" "hook 0080"; fi
 
 baslik "ADIM 7 – Android kataloğu ve açılış markası"
 kontrol "Gömülü katalog (JSON) geçerli" "android-katalog.json" python3 -m json.tool /usr/share/kok/android-katalog.json
@@ -93,9 +96,25 @@ kontrol "Kullanım kılavuzu" "usr/share/kok/kilavuz.html" test -f /usr/share/ko
 kontrol "Sürüm dosyası" "hook 0070" grep -q KOK_SURUM /etc/kok/surum
 bilgi "Kök OS sürümü: $(grep '^KOK_SURUM=' /etc/kok/surum 2>/dev/null | cut -d= -f2)  Adımlar: $(grep '^ADIMLAR=' /etc/kok/surum 2>/dev/null | cut -d= -f2)"
 
+baslik "ADIM 13 – Kimlik, dil, katalog, köşeler"
+kontrol "Hakkında (i) aracı geçerli" "kok-hakkinda" python3 -c "import ast;ast.parse(open('/usr/local/bin/kok-hakkinda').read())"
+kontrol "Panelde 'i' düğmesi dosyası" "skel-config/xfce4/panel/launcher-10" test -f "$HOME/.config/xfce4/panel/launcher-10/kok-hakkinda.desktop"
+kontrol "Masaüstünde Hakkında kısayolu" "etc/skel/Desktop" test -f "$HOME/Desktop/kok-hakkinda.desktop"
+kontrol "Çeviri modülü ve sözlüğü" "kok_i18n.py, ceviri-en.json" python3 -c "import sys,json;sys.path.insert(0,'/usr/local/lib/kok');import kok_i18n;json.load(open('/usr/share/kok/ceviri-en.json'))"
+kontrol "İngilizce mesaj çevirici (zenity)" "usr/local/bin/zenity" test -x /usr/local/bin/zenity
+kontrol "İngilizce yerel ayar (en_US) kurulu" "hook 0010" bash -c "locale -a | grep -qi 'en_US'"
+kontrol "Dil değiştirme aracı" "kok-dil, kok-dil-uygula" test -x /usr/local/bin/kok-dil
+kontrol "Android kataloğu geçerli (alanlar)" "android-katalog.json" python3 -c "import json;d=json.load(open('/usr/share/kok/android-katalog.json'));assert d['uygulamalar'] and all('ad' in u for u in d['uygulamalar'])"
+kontrol "picom (yuvarlak köşeler) kurulu" "kok-cila.list.chroot" command -v picom
+if [ "$(cat /tmp/kok/profil 2>/dev/null)" = "standart" ] && [ ! -f "$HOME/.config/kok/yuvarlak-kapali" ]; then
+  kontrol "picom çalışıyor (standart profil)" "kok-profil, picom.conf" pgrep -x picom
+else bilgi "picom beklenmiyor (hafif profil veya köşeler kapalı)"; fi
+bilgi "Aktif dil: $(grep '^LANG=' /etc/default/locale 2>/dev/null)  Oturum: $LANG"
+bilgi "GitHub depo ayarı: $(grep '^GITHUB_DEPO=' /etc/kok/geri-bildirim.conf 2>/dev/null | cut -d= -f2)"
+
 if [ "$(systemd-detect-virt 2>/dev/null)" = "oracle" ]; then
 baslik "VirtualBox entegrasyonu (pano, ekran)"
-kontrol "VirtualBox konuk paketi kurulu" "kok-cekirdek/kok-cila listesi (virtualbox-guest-x11)" bash -c "dpkg -s virtualbox-guest-x11 >/dev/null 2>&1"
+kontrol "VirtualBox konuk araçları (VBoxClient) kurulu" "hook 0125-vbox (resmi Guest Additions)" command -v VBoxClient
 kontrol "vboxguest çekirdek modülü" "çekirdek" bash -c "lsmod | grep -q vboxguest"
 kontrol "VBoxClient (pano) çalışıyor" "autostart/kok-vm-pano.desktop" pgrep -f VBoxClient
 bilgi "Pano için VirtualBox menüsü: Aygıtlar > Paylaşılan Pano > Çift Yönlü"

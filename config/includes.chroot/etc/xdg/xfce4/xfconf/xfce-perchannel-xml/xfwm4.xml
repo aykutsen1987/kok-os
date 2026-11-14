@@ -3,7 +3,8 @@
   <property name="general" type="empty">
     <property name="theme" type="string" value="Arc-Dark"/>
     <property name="placement_mode" type="string" value="center"/>
-    <property name="use_compositing" type="bool" value="true"/>
+    <property name="placement_ratio" type="int" value="100"/>
+    <property name="use_compositing" type="bool" value="false"/>
     <property name="button_layout" type="string" value="CHM|"/>
     <property name="title_alignment" type="string" value="center"/>
     <property name="title_font" type="string" value="Inter Bold 10"/>

@@ -8,10 +8,10 @@ windowPlacement: center
 strings:
   productName: Kök OS
   shortProductName: Kök
-  version: "0.5"
-  shortVersion: "0.5"
-  versionedName: Kök OS 0.5
-  shortVersionedName: Kök 0.5
+  version: "0.7"
+  shortVersion: "0.7"
+  versionedName: Kök OS 0.7
+  shortVersionedName: Kök 0.7
   bootloaderEntryName: Kök OS
   productUrl: https://example.com/kok-os
   supportUrl: https://example.com/kok-os/destek

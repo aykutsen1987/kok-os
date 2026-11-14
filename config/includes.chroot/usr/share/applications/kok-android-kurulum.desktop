@@ -2,6 +2,7 @@
 Type=Application
 Name=Android Ortamını Kur
 Name[tr]=Android Ortamını Kur
+Name[en]=Set Up Android Environment
 Exec=/usr/local/bin/kok-android-kurulum
 Icon=system-software-install
 Terminal=false

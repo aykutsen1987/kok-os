@@ -2,7 +2,9 @@
 Type=Application
 Name=Hata Raporu Oluştur
 Name[tr]=Hata Raporu Oluştur
+Name[en]=Create Error Report
 Comment=Sorun bildirimi için sistem raporu hazırlar
 Exec=/usr/local/bin/kok-hata-raporu
 Icon=utilities-terminal
 Terminal=false
+Comment[en]=Prepares a system report for support

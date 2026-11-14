@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-# Kök Ayarlar Merkezi – Türkçe sistem ayarları
+# Kök Ayarlar Merkezi – Türkçe / English sistem ayarları
 import gi, os, sys, subprocess
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk
+from gi.repository import Gtk, GLib
+sys.path.insert(0, "/usr/local/lib/kok")
+from kok_i18n import T, agac, dil, kilavuz
 
 LOGDIR = os.path.expanduser("~/.local/state/kok")
 os.makedirs(LOGDIR, exist_ok=True)
@@ -12,12 +14,15 @@ except Exception:
     pass
 BIN = "/usr/local/bin"
 PROFIL_DOSYASI = os.path.expanduser("~/.config/kok/profil")
+YUVARLAK_BAYRAK = os.path.expanduser("~/.config/kok/yuvarlak-kapali")
+SEKMELER = ["genel", "gorunum", "windows", "android", "donanim", "dil", "sistem"]
 
 
 def mesaj(baslik, metin, parent=None):
     d = Gtk.MessageDialog(parent=parent, modal=True, message_type=Gtk.MessageType.INFO,
-                          buttons=Gtk.ButtonsType.OK, text=baslik)
-    d.format_secondary_text(metin)
+                          buttons=Gtk.ButtonsType.OK, text=T(baslik))
+    d.format_secondary_text(T(metin))
+    d.set_position(Gtk.WindowPosition.CENTER)
     d.run()
     d.destroy()
 
@@ -43,19 +48,20 @@ def tema_var(ad):
 
 
 class Pencere(Gtk.Window):
-    def __init__(self):
+    def __init__(self, sekme=None):
         super().__init__(title="Kök Ayarlar")
-        self.set_default_size(520, 440)
+        self.set_default_size(540, 480)
         self.set_position(Gtk.WindowPosition.CENTER)
         self.set_icon_name("preferences-system")
-        nb = Gtk.Notebook()
-        self.add(nb)
-        nb.append_page(self.genel(), Gtk.Label(label="Genel"))
-        nb.append_page(self.gorunum(), Gtk.Label(label="Görünüm"))
-        nb.append_page(self.windows(), Gtk.Label(label="Windows"))
-        nb.append_page(self.android(), Gtk.Label(label="Android"))
-        nb.append_page(self.donanim(), Gtk.Label(label="Donanım"))
-        nb.append_page(self.sistem(), Gtk.Label(label="Sistem"))
+        self.nb = Gtk.Notebook()
+        self.add(self.nb)
+        for ad, fn in (("Genel", self.genel), ("Görünüm", self.gorunum), ("Windows", self.windows),
+                       ("Android", self.android), ("Donanım", self.donanim), ("Dil", self.dil_sekmesi),
+                       ("Sistem", self.sistem)):
+            self.nb.append_page(fn(), Gtk.Label(label=ad))
+        agac(self)
+        if sekme in SEKMELER:
+            GLib.idle_add(self.nb.set_current_page, SEKMELER.index(sekme))
 
     def kutu(self):
         b = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
@@ -67,7 +73,7 @@ class Pencere(Gtk.Window):
         e.set_line_wrap(True)
         e.set_selectable(True)
         if kalin:
-            e.set_markup("<b>%s</b>" % GLib_escape(metin))
+            e.set_markup("<b>%s</b>" % GLib.markup_escape_text(metin))
         else:
             e.set_text(metin)
         kutu.pack_start(e, False, False, 0)
@@ -79,34 +85,37 @@ class Pencere(Gtk.Window):
         kutu.pack_start(d, False, False, 0)
         return d
 
+    def kaydirmali(self, b):
+        sw = Gtk.ScrolledWindow()
+        sw.add(b)
+        return sw
+
     # --- Genel ---
     def genel(self):
         b = self.kutu()
         ram = cikti(["awk", "/MemTotal/{print int($2/1024)}", "/proc/meminfo"])
         cpu = cikti(["bash", "-c", "grep -m1 'model name' /proc/cpuinfo | cut -d: -f2"])
-        mevcut = ""
         try:
             mevcut = open("/tmp/kok/profil").read().strip()
         except Exception:
-            pass
+            mevcut = ""
         self.etiket(b, "Bu bilgisayar", True)
         self.etiket(b, "İşlemci:%s\nBellek: %s MB\nAktif profil: %s" % (cpu, ram, mevcut or "bilinmiyor"))
         self.etiket(b, "Performans profili", True)
         self.etiket(b, "Hafif profil animasyonları kapatır, eski bilgisayarlarda daha akıcı çalışır.")
         self.combo = Gtk.ComboBoxText()
         for ad in ("Otomatik (önerilen)", "Hafif", "Standart"):
-            self.combo.append_text(ad)
+            self.combo.append_text(T(ad))
         sec = 0
         try:
-            v = open(PROFIL_DOSYASI).read().strip()
-            sec = {"hafif": 1, "standart": 2}.get(v, 0)
+            sec = {"hafif": 1, "standart": 2}.get(open(PROFIL_DOSYASI).read().strip(), 0)
         except Exception:
             pass
         self.combo.set_active(sec)
         b.pack_start(self.combo, False, False, 0)
         self.dugme(b, "Profili Uygula", self.profil_uygula)
         self.dugme(b, "Performans Özeti", lambda: calistir([BIN + "/kok-performans", "--gui"]))
-        return b
+        return self.kaydirmali(b)
 
     def profil_uygula(self):
         deger = ["otomatik", "hafif", "standart"][self.combo.get_active()]
@@ -127,10 +136,14 @@ class Pencere(Gtk.Window):
         self.etiket(b, "Tema", True)
         self.dugme(b, "Koyu Tema", lambda: self.tema_ayarla(True))
         self.dugme(b, "Açık Tema", lambda: self.tema_ayarla(False))
+        self.etiket(b, "Pencere köşeleri", True)
+        self.etiket(b, "Yuvarlak köşeler eski bilgisayarlarda biraz daha fazla işlemci kullanır. Hafif profilde kapalıdır.")
+        self.dugme(b, "Yuvarlak Köşeleri Aç", lambda: self.yuvarlak(True))
+        self.dugme(b, "Yuvarlak Köşeleri Kapat", lambda: self.yuvarlak(False))
         self.etiket(b, "Duvar kâğıdı ve diğer görünüm ayarları için: Uygulamalar menüsü → Ayarlar → Masaüstü.")
         self.dugme(b, "Masaüstü Ayarlarını Aç", lambda: calistir(["xfdesktop-settings"]))
         self.dugme(b, "Rıhtım Ayarlarını Aç", lambda: calistir(["plank", "--preferences"]))
-        return b
+        return self.kaydirmali(b)
 
     def tema_ayarla(self, koyu):
         if koyu:
@@ -141,10 +154,22 @@ class Pencere(Gtk.Window):
         cikti(["xfconf-query", "-c", "xfwm4", "-p", "/general/theme", "-n", "-t", "string", "-s", ad])
         mesaj("Tema değişti", "Uygulanan tema: " + ad, self)
 
+    def yuvarlak(self, ac):
+        os.makedirs(os.path.dirname(YUVARLAK_BAYRAK), exist_ok=True)
+        if ac:
+            try:
+                os.remove(YUVARLAK_BAYRAK)
+            except FileNotFoundError:
+                pass
+        else:
+            open(YUVARLAK_BAYRAK, "w").write("1\n")
+        calistir([BIN + "/kok-profil"])
+        mesaj("Kaydedildi", "Görünüm ayarı uygulandı.", self)
+
     # --- Windows ---
     def windows(self):
         b = self.kutu()
-        surum = cikti(["wine", "--version"]) or "Kurulu değil"
+        surum = cikti(["wine", "--version"]) or T("Kurulu değil")
         self.etiket(b, "Windows Uyumluluğu (Wine)", True)
         self.etiket(b, "Sürüm: " + surum)
         self.etiket(b, "Bir .exe dosyasına çift tıklamak yeterlidir. Her program kendi ayrı ortamında çalışır.")
@@ -152,7 +177,7 @@ class Pencere(Gtk.Window):
         self.dugme(b, "Wine Ayarlarını Aç", lambda: calistir(["winecfg"]))
         self.dugme(b, "Program Ortamları Klasörünü Aç", self.prefix_ac)
         self.dugme(b, "Uyumluluk Notlarını Oku", lambda: calistir(["mousepad", "/usr/share/kok/uyumluluk.md"]))
-        return b
+        return self.kaydirmali(b)
 
     def prefix_ac(self):
         yol = os.path.expanduser("~/.local/share/kok-wine")
@@ -160,10 +185,10 @@ class Pencere(Gtk.Window):
         calistir(["xdg-open", yol])
 
     def dosya_sec(self, baslik, desenler):
-        d = Gtk.FileChooserDialog(title=baslik, parent=self, action=Gtk.FileChooserAction.OPEN)
-        d.add_buttons("İptal", Gtk.ResponseType.CANCEL, "Seç", Gtk.ResponseType.OK)
+        d = Gtk.FileChooserDialog(title=T(baslik), parent=self, action=Gtk.FileChooserAction.OPEN)
+        d.add_buttons(T("İptal"), Gtk.ResponseType.CANCEL, T("Seç"), Gtk.ResponseType.OK)
         f = Gtk.FileFilter()
-        f.set_name("Uygun dosyalar")
+        f.set_name(T("Uygun dosyalar"))
         for p in desenler:
             f.add_pattern(p)
         d.add_filter(f)
@@ -181,7 +206,7 @@ class Pencere(Gtk.Window):
         b = self.kutu()
         self.etiket(b, "Android Uyumluluğu (Waydroid)", True)
         r = subprocess.run([BIN + "/kok-android-kontrol"], capture_output=True, text=True)
-        durum = "Bu bilgisayar Android'i çalıştırabilir." if r.returncode == 0 else (r.stdout.strip() or "Android şu an kullanılamıyor.")
+        durum = "Bu bilgisayar Android'i çalıştırabilir." if r.returncode == 0 else (T(r.stdout.strip()) or "Android şu an kullanılamıyor.")
         kurulu = os.path.exists("/var/lib/waydroid/waydroid.cfg")
         self.etiket(b, durum)
         self.etiket(b, "Android ortamı: " + ("kurulu" if kurulu else "henüz kurulmadı"))
@@ -189,7 +214,7 @@ class Pencere(Gtk.Window):
         self.dugme(b, "Android Ortamını Kur", lambda: calistir([BIN + "/kok-android-kurulum"]))
         self.dugme(b, "Android'i Başlat", lambda: calistir([BIN + "/kok-android-kopru"]))
         self.dugme(b, "APK Dosyası Seç ve Kur…", self.apk_sec)
-        return b
+        return self.kaydirmali(b)
 
     def apk_sec(self):
         yol = self.dosya_sec("APK dosyası seçin", ["*.apk", "*.APK"])
@@ -208,9 +233,28 @@ class Pencere(Gtk.Window):
         self.dugme(b, "Wi-Fi ve Ağ", lambda: calistir(["nm-connection-editor"]))
         self.dugme(b, "Bluetooth", lambda: calistir(["blueman-manager"]))
         self.dugme(b, "Güç Ayarları", lambda: calistir(["xfce4-power-manager-settings"]))
-        sw = Gtk.ScrolledWindow()
-        sw.add(b)
-        return sw
+        return self.kaydirmali(b)
+
+    # --- Dil / Language ---
+    def dil_sekmesi(self):
+        b = self.kutu()
+        self.etiket(b, "Sistem dili", True)
+        self.etiket(b, "Şu anki dil: " + ("English" if dil() == "en" else "Türkçe"))
+        self.rb_tr = Gtk.RadioButton.new_with_label_from_widget(None, "Türkçe")
+        self.rb_en = Gtk.RadioButton.new_with_label_from_widget(self.rb_tr, "English")
+        (self.rb_en if dil() == "en" else self.rb_tr).set_active(True)
+        b.pack_start(self.rb_tr, False, False, 0)
+        b.pack_start(self.rb_en, False, False, 0)
+        self.cb_klavye = Gtk.CheckButton(label="Klavye düzenini de değiştir (Türkçe Q ↔ US İngilizce)")
+        b.pack_start(self.cb_klavye, False, False, 0)
+        self.dugme(b, "Uygula", self.dil_uygula)
+        return self.kaydirmali(b)
+
+    def dil_uygula(self):
+        args = [BIN + "/kok-dil", "en" if self.rb_en.get_active() else "tr"]
+        if self.cb_klavye.get_active():
+            args.append("klavye")
+        calistir(args)
 
     # --- Sistem ---
     def sistem(self):
@@ -220,25 +264,24 @@ class Pencere(Gtk.Window):
             self.etiket(b, open("/etc/kok/surum").read().strip())
         except Exception:
             self.etiket(b, "Sürüm bilgisi bulunamadı.")
+        self.dugme(b, "Kök OS Hakkında", lambda: calistir([BIN + "/kok-hakkinda"]))
         self.dugme(b, "Güncellemeleri Denetle ve Kur", lambda: calistir([BIN + "/kok-guncelle"]))
-        self.dugme(b, "Kullanım Kılavuzu", lambda: calistir(["xdg-open", "/usr/share/kok/kilavuz.html"]))
+        self.dugme(b, "Kullanım Kılavuzu", lambda: calistir(["xdg-open", kilavuz()]))
         self.dugme(b, "Sağlık Kontrolü", lambda: calistir([BIN + "/kok-saglik", "--gui"]))
         self.dugme(b, "Hata Raporu Oluştur", lambda: calistir([BIN + "/kok-hata-raporu"]))
+        self.dugme(b, "Hata Raporunu GitHub'a Gönder", lambda: calistir([BIN + "/kok-geri-bildirim"]))
         self.dugme(b, "Kök OS'u Diske Kur", lambda: calistir(["sudo", "-E", "calamares"]))
-        return b
-
-    def guncelle(self):
-        komut = "sudo apt-get update && sudo apt-get full-upgrade; echo; read -p 'Kapatmak için Enter tuşuna basın...'"
-        calistir(["xfce4-terminal", "--title=Güncelleme", "-x", "bash", "-c", komut])
-
-
-def GLib_escape(s):
-    from gi.repository import GLib
-    return GLib.markup_escape_text(s)
+        return self.kaydirmali(b)
 
 
 if __name__ == "__main__":
-    pencere = Pencere()
-    pencere.connect("destroy", Gtk.main_quit)
-    pencere.show_all()
+    sekme = None
+    if "--sekme" in sys.argv:
+        try:
+            sekme = sys.argv[sys.argv.index("--sekme") + 1]
+        except IndexError:
+            pass
+    p = Pencere(sekme)
+    p.connect("destroy", Gtk.main_quit)
+    p.show_all()
     Gtk.main()

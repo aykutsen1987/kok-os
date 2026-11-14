@@ -87,9 +87,23 @@ jobs:
           cp *.iso kok-build-rapor.txt build.log /tmp/cikti/ 2>/dev/null || true
           { date; df -h /; ls -la; ls -la auto config 2>&1; } > /tmp/cikti/tani.txt 2>&1
           cd /tmp/cikti
-          for f in *.iso; do [ -f "$f" ] && mv "$f" kok-os-0.5-amd64.iso; done
+          for f in *.iso; do [ -f "$f" ] && mv "$f" kok-os-0.7-amd64.iso; done
           ls *.iso >/dev/null 2>&1 && sha256sum *.iso > SHA256SUMS.txt || true
           ls -la /tmp/cikti
+
+      - name: Raporu özet sayfasına yaz
+        if: always()
+        run: |
+          {
+            echo "## Kök OS derleme raporu"
+            if [ -f /tmp/cikti/kok-build-rapor.txt ]; then
+              echo '```'; head -c 60000 /tmp/cikti/kok-build-rapor.txt; echo '```'
+            else
+              echo "Rapor oluşmadı. Aşağıda derleme çıktısının son satırları var."
+              echo '```'; tail -n 80 /tmp/cikti/lb-build.log 2>/dev/null; echo '```'
+            fi
+            echo "### Atlanan paketler"; echo '```'; cat /tmp/cikti/eksik-paketler.txt 2>/dev/null; echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: ISO ve raporları yükle
         if: always()

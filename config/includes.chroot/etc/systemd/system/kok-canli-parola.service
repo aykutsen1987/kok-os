@@ -1,12 +1,12 @@
 [Unit]
-Description=Kök OS canlı oturum: kullanıcı parolasını boşalt (giriş ekranı çıkarsa parola gerekmesin)
+Description=Kök OS canlı oturum: kok kullanıcı parolasını live yap, süre dolması/yaşlandırmayı kapat
 After=live-config.service
 Before=display-manager.service
 ConditionPathExists=/run/live/medium
 
 [Service]
 Type=oneshot
-ExecStart=/bin/sh -c 'id kok >/dev/null 2>&1 && passwd -d kok'
+ExecStart=/bin/sh -c 'id kok >/dev/null 2>&1 && echo "kok:live" | chpasswd && chage -d "$(date +%%F)" -m 0 -M 99999 -I -1 -E -1 kok'
 
 [Install]
 WantedBy=multi-user.target

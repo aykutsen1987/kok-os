@@ -127,6 +127,8 @@ SATIR=60 komut $S journalctl -b -u lightdm --no-pager
 SATIR=40 komut $S bash -c "ls -la /var/log/lightdm; tail -n 40 /var/log/lightdm/seat0-greeter.log"
 SATIR=30 komut $S bash -c "tail -n 30 /var/log/lightdm/x-0.log"
 SATIR=40 komut bash -c "tail -n 40 ~/.xsession-errors"
+komut $S chage -l kok
+komut $S bash -c "grep '^kok:' /etc/shadow | cut -d: -f1,3-9"
 komut bash -c "loginctl list-sessions --no-pager; systemctl is-active kok-canli-parola.service live-config.service"
 komut bash -c "grep -n . /etc/lightdm/lightdm.conf /etc/lightdm/lightdm.conf.d/*.conf 2>/dev/null"
 } > "$CIKTI" 2>&1

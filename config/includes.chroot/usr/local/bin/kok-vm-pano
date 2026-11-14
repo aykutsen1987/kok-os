@@ -3,6 +3,7 @@
 [ "$(systemd-detect-virt 2>/dev/null)" = "oracle" ] || exit 0
 command -v VBoxClient >/dev/null 2>&1 || exit 0
 mkdir -p "$HOME/.local/state/kok"
+sudo -n adduser --quiet "$USER" vboxsf >/dev/null 2>&1 || true
 {
   VBoxClient --clipboard
   VBoxClient --draganddrop

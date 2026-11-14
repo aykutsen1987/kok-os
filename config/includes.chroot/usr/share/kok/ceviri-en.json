@@ -158,5 +158,6 @@
  "Canlı oturumda giriş ekranı gelirse kullanıcı: kok, parola: live": "In a live session, if the login screen appears: user: kok, password: live",
  "Dil ayarlandı.": "Language set.",
  "Dil değiştirilemedi.": "The language could not be changed.",
- "GitHub deposu ayarlı değil.": "The GitHub repository is not set."
+ "GitHub deposu ayarlı değil.": "The GitHub repository is not set.",
+ "Dil değişikliğinin uygulanması için oturum yeniden başlatılacak. Açık işleriniz kapanır. Devam edilsin mi?": "The session will restart to apply the language change. Your open work will close. Continue?"
 }

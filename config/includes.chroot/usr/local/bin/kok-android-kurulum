@@ -10,7 +10,7 @@ fi
 TUR=$(zenity --list --radiolist --title="Kök Android" --text="Android sürümünü seçin:" --column="" --column="Seçenek" --column="Kod" --hide-column=3 --print-column=3 TRUE "Standart (Google'sız, önerilir)" VANILLA FALSE "Google Play'li (ek cihaz kaydı gerekir)" GAPPS 2>/dev/null) || exit 0
 [ -z "$TUR" ] && TUR=VANILLA
 echo "Android sürümü: $TUR"
-pkexec bash -c "waydroid init -s $TUR -f && systemctl enable --now waydroid-container.service" \
+/usr/local/bin/kok-yetkili bash -c "waydroid init -s $TUR -f && systemctl enable --now waydroid-container.service" \
  | zenity --progress --pulsate --auto-close --no-cancel --title="Kök Android" --text="Android hazırlanıyor, lütfen bekleyin…" 2>/dev/null
 if [ -d /var/lib/waydroid/images ] || [ -f /var/lib/waydroid/waydroid.cfg ]; then
   /usr/local/bin/kok-android-onyukle

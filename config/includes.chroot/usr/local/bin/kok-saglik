@@ -97,6 +97,11 @@ kontrol "Sürüm dosyası" "hook 0070" grep -q KOK_SURUM /etc/kok/surum
 bilgi "Kök OS sürümü: $(grep '^KOK_SURUM=' /etc/kok/surum 2>/dev/null | cut -d= -f2)  Adımlar: $(grep '^ADIMLAR=' /etc/kok/surum 2>/dev/null | cut -d= -f2)"
 
 baslik "ADIM 13 – Kimlik, dil, katalog, köşeler"
+if grep -q "boot=live" /proc/cmdline 2>/dev/null; then
+  kontrol "Canlı oturumda parolasız yönetici yetkisi (sudo)" "live-config sudoers / kok-yetkili" sudo -n true
+  kontrol "Parolasız yetki kuralı (polkit)" "etc/polkit-1/rules.d/49-kok-canli.rules" test -f /etc/polkit-1/rules.d/49-kok-canli.rules
+  kontrol "Otomatik giriş yapılandırması" "etc/lightdm/lightdm.conf.d/50-kok.conf" grep -q 'autologin-user=kok' /etc/lightdm/lightdm.conf.d/50-kok.conf
+fi
 kontrol "Hakkında (i) aracı geçerli" "kok-hakkinda" python3 -c "import ast;ast.parse(open('/usr/local/bin/kok-hakkinda').read())"
 kontrol "Panelde 'i' düğmesi dosyası" "skel-config/xfce4/panel/launcher-10" test -f "$HOME/.config/xfce4/panel/launcher-10/kok-hakkinda.desktop"
 kontrol "Masaüstünde Hakkında kısayolu" "etc/skel/Desktop" test -f "$HOME/Desktop/kok-hakkinda.desktop"

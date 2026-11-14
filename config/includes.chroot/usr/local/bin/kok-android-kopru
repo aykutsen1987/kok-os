@@ -6,7 +6,7 @@ if [ ! -f /var/lib/waydroid/waydroid.cfg ]; then
   zenity --question --title="Kök Android" --text="Android henüz kurulmamış. Şimdi kurulsun mu?" 2>/dev/null && exec /usr/local/bin/kok-android-kurulum
   exit 0
 fi
-pkexec systemctl start waydroid-container.service
+/usr/local/bin/kok-yetkili systemctl start waydroid-container.service
 waydroid session start >/dev/null 2>&1 &
 sleep 3
 if command -v cage >/dev/null 2>&1; then

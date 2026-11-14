@@ -1,0 +1,12 @@
+[Unit]
+Description=Kök OS canlı oturum: kullanıcı parolasını boşalt (giriş ekranı çıkarsa parola gerekmesin)
+After=live-config.service
+Before=display-manager.service
+ConditionPathExists=/run/live/medium
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c 'id kok >/dev/null 2>&1 && passwd -d kok'
+
+[Install]
+WantedBy=multi-user.target

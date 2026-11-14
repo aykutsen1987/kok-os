@@ -119,6 +119,16 @@ SATIR=30 komut tail -n 30 ~/.local/state/kok/kok-dil.log
 komut cat /etc/kok/android-katalog.conf
 komut bash -c "ls ~/.config/xfce4/panel/launcher-10 ~/Desktop 2>&1"
 komut cat /etc/kok/geri-bildirim.conf
+komut bash -c "cat /etc/lightdm/lightdm.conf.d/*.conf; ls /etc/polkit-1/rules.d; sudo -n true && echo SUDO_PAROLASIZ_TAMAM"
+
+bolum "[GIRIS TANISI] Otomatik giriş / giriş ekranı sorunu (lightdm, oturum)"
+komut bash -c "echo GIRIS TANISI; id kok; getent group sudo nopasswdlogin autologin vboxsf; grep '^kok:' /etc/passwd"
+SATIR=60 komut $S journalctl -b -u lightdm --no-pager
+SATIR=40 komut $S bash -c "ls -la /var/log/lightdm; tail -n 40 /var/log/lightdm/seat0-greeter.log"
+SATIR=30 komut $S bash -c "tail -n 30 /var/log/lightdm/x-0.log"
+SATIR=40 komut bash -c "tail -n 40 ~/.xsession-errors"
+komut bash -c "loginctl list-sessions --no-pager; systemctl is-active kok-canli-parola.service live-config.service"
+komut bash -c "grep -n . /etc/lightdm/lightdm.conf /etc/lightdm/lightdm.conf.d/*.conf 2>/dev/null"
 } > "$CIKTI" 2>&1
 PANO=""; PAYLASIM=""
 if command -v xclip >/dev/null && [ -n "$DISPLAY" ]; then xclip -selection clipboard < "$CIKTI" 2>/dev/null && PANO="Rapor panoya kopyalandı (Ctrl+V)."; fi

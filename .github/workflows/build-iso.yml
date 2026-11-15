@@ -76,7 +76,7 @@ jobs:
         run: |
           cd "$KOK_DIR"
           ls -la auto
-          lb config --bootappend-live "boot=live components username=kok" 2>&1 | tee /tmp/cikti/lb-config.log
+          lb config 2>&1 | tee /tmp/cikti/lb-config.log
           lb build 2>&1 | tee /tmp/cikti/lb-build.log
 
       - name: Çıktıları topla

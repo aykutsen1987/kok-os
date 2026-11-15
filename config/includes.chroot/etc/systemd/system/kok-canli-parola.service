@@ -1,12 +1,12 @@
 [Unit]
-Description=Kok OS canli oturum kullanicisinin parolasini ayarla
+Description=Kok OS canli oturum kullanicisini hazirla (kok / live)
 Wants=live-config.service
 After=live-config.service
-Before=display-manager.service
+Before=display-manager.service getty@tty1.service
 
 [Service]
 Type=oneshot
-ExecStart=/bin/sh -c 'for i in $(seq 1 60); do id kok >/dev/null 2>&1 && break; sleep 1; done; id kok >/dev/null 2>&1 || exit 1; printf "kok:live\n" | chpasswd; passwd -u kok >/dev/null 2>&1 || true; chage -d "$(date +%%F)" -m 0 -M 99999 -I -1 -E -1 kok'
+ExecStart=/usr/local/sbin/kok-kullanici-hazirla
 RemainAfterExit=yes
 
 [Install]

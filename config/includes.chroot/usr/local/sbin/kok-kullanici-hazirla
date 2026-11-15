@@ -1,0 +1,16 @@
+#!/bin/sh
+# kok kullanicisini garanti eder (yoksa olusturur), parolasini "live" yapar.
+# "hemen" argumani verilirse beklemeden calisir (ISO derlenirken).
+if [ "$1" != "hemen" ]; then
+  for i in $(seq 1 20); do id kok >/dev/null 2>&1 && break; sleep 1; done
+fi
+if ! id kok >/dev/null 2>&1; then
+  useradd -m -u 1000 -s /bin/bash -c "Kök" kok || exit 1
+fi
+for g in sudo audio video plugdev netdev cdrom floppy dip bluetooth scanner lpadmin; do
+  getent group "$g" >/dev/null 2>&1 && usermod -aG "$g" kok
+done
+echo "kok:live" | chpasswd || exit 1
+passwd -u kok >/dev/null 2>&1 || true
+chage -d "$(date +%F)" -m 0 -M 99999 -I -1 -E -1 kok
+exit 0

@@ -13,4 +13,5 @@ mkdir -p /etc/systemd/system/multi-user.target.wants
 ln -sf /etc/systemd/system/kok-canli-parola.service /etc/systemd/system/multi-user.target.wants/kok-canli-parola.service
 systemctl enable kok-canli-parola.service 2>/dev/null || true
 [ -L /etc/systemd/system/multi-user.target.wants/kok-canli-parola.service ] && echo "[KOK:A13:kimlik] canli parola servisi etkin" || echo "[KOK-UYARI:A13:kimlik] canli parola servisi etkinlestirilemedi"
+dpkg -s user-setup >/dev/null 2>&1 && echo "[KOK:A13:kimlik] user-setup kurulu (kok kullanicisi olusturulabilir)" || echo "[KOK-HATA:A13:kimlik] user-setup KURULU DEGIL: kok kullanicisi olusmaz!"
 exit 0

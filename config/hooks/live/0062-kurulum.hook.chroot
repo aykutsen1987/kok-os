@@ -1,0 +1,61 @@
+#!/bin/sh
+KOK_ADIM="A14"; KOK_MOD="kurulum"
+echo "[KOK:$KOK_ADIM:$KOK_MOD] BASLADI"
+trap 'k=$?; if [ $k -ne 0 ]; then echo "[KOK-HATA:$KOK_ADIM:$KOK_MOD] kod=$k"; else echo "[KOK:$KOK_ADIM:$KOK_MOD] TAMAM"; fi' EXIT
+chmod +x /usr/local/sbin/kok-kurulum-bitir 2>/dev/null
+if [ ! -f /etc/calamares/settings.conf ]; then echo "[KOK-UYARI:A14:kurulum] settings.conf yok"; exit 0; fi
+python3 - <<'PY'
+import os, re, sys
+p = "/etc/calamares/settings.conf"
+satirlar = open(p, encoding="utf-8").read().split("\n")
+def ad(s):
+    return re.sub(r"#.*", "", s).strip().lstrip("-").strip()
+ex = None
+for i, s in enumerate(satirlar):
+    if re.match(r"^\s*-\s*exec:\s*$", s):
+        ex = i
+        break
+if ex is None:
+    print("[KOK-UYARI:A14:kurulum] exec bolumu bulunamadi; kurulum adimlari eklenmedi"); sys.exit(0)
+sonu = len(satirlar)
+for j in range(ex + 1, len(satirlar)):
+    if re.match(r"^-\s", satirlar[j]) or re.match(r"^[A-Za-z]", satirlar[j]):
+        sonu = j
+        break
+cocuk = [k for k in range(ex + 1, sonu) if re.match(r"^\s*-\s*\S", satirlar[k]) and not satirlar[k].lstrip().startswith("#")]
+if not cocuk:
+    print("[KOK-UYARI:A14:kurulum] exec ogeleri bulunamadi"); sys.exit(0)
+girinti = re.match(r"^(\s*)", satirlar[cocuk[0]]).group(1)
+blok = [ad(satirlar[k]) for k in cocuk]
+# mevcut bizim modülleri ve removeuser'ı çıkar; sonra doğru yere koy
+yeni = [b for b in blok if b not in ("kokuyari", "kokbitir", "removeuser")]
+import glob
+def modul_var(n):
+    adaylar = ["/usr/local/lib/calamares/modules/" + n] + glob.glob("/usr/lib/**/calamares/modules/" + n, recursive=True)
+    return any(os.path.isdir(a) for a in adaylar)
+if "partition" in yeni and modul_var("kokuyari"):
+    yeni.insert(yeni.index("partition"), "kokuyari")
+else:
+    print("[KOK-UYARI:A14:kurulum] kokuyari eklenemedi")
+if "users" in yeni and modul_var("removeuser"):
+    yeni.insert(yeni.index("users"), "removeuser")
+else:
+    print("[KOK-UYARI:A14:kurulum] removeuser eklenemedi (users yok ya da modul yok)")
+if "bootloader" in yeni and modul_var("kokbitir"):
+    yeni.insert(yeni.index("bootloader") + 1, "kokbitir")
+else:
+    print("[KOK-UYARI:A14:kurulum] kokbitir eklenemedi")
+for i, s2 in enumerate(satirlar):
+    if re.match(r"^modules-search:", s2):
+        satirlar[i] = "modules-search: [ local, /usr/local/lib/calamares/modules ]"
+        print("[KOK:A14:kurulum] modules-search guncellendi")
+        break
+else:
+    satirlar.append("modules-search: [ local, /usr/local/lib/calamares/modules ]")
+yeni_satirlar = [girinti + "- " + b for b in yeni]
+# eski öğelerin arasındaki yorum/boş satırlar korunmaz; blok sade yeniden yazılır
+satirlar[cocuk[0]:cocuk[-1] + 1] = yeni_satirlar
+open(p, "w", encoding="utf-8").write("\n".join(satirlar))
+print("[KOK:A14:kurulum] exec sirasi: " + " > ".join(yeni))
+PY
+exit 0

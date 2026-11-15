@@ -1,0 +1,12 @@
+os-prober
+ntfs-3g
+grub-pc-bin
+grub-efi-amd64-bin
+grub-efi-amd64-signed
+shim-signed
+efibootmgr
+dosfstools
+exfatprogs
+btrfs-progs
+cryptsetup
+gparted

@@ -1,33 +1,66 @@
 #!/bin/sh
+# VirtualBox konuk araçları (pano, sürükle-bırak, ekran): resmi Guest Additions ISO'sundan çıkarılır.
 KOK_ADIM="A9"; KOK_MOD="vbox"
 echo "[KOK:$KOK_ADIM:$KOK_MOD] BASLADI"
 trap 'k=$?; if [ $k -ne 0 ]; then echo "[KOK-HATA:$KOK_ADIM:$KOK_MOD] kod=$k"; else echo "[KOK:$KOK_ADIM:$KOK_MOD] TAMAM"; fi' EXIT
 groupadd -f vboxsf; groupadd -f vboxuser
 V=7.2.2
-mkdir -p /tmp/vbx && cd /tmp/vbx
+W=/tmp/vbx
+rm -rf $W; mkdir -p $W/iso && cd $W
+# Çıkarma araçları (bsdtar, 7z, xorriso): biri başarısız olursa diğeri denenir
+apt-get install -y libarchive-tools bzip2 xz-utils >/dev/null 2>&1 || echo "[KOK-UYARI:A9:vbox] libarchive-tools kurulamadi"
+apt-get install -y 7zip >/dev/null 2>&1 || apt-get install -y p7zip-full >/dev/null 2>&1 || echo "[KOK-UYARI:A9:vbox] 7zip kurulamadi"
+apt-get install -y xorriso >/dev/null 2>&1 || echo "[KOK-UYARI:A9:vbox] xorriso kurulamadi"
 ISO=""
-if curl -fL --max-time 600 -o vbga.iso "https://download.virtualbox.org/virtualbox/$V/VBoxGuestAdditions_$V.iso"; then
-  ISO=/tmp/vbx/vbga.iso
-else
+for i in 1 2 3; do
+  if curl -fL --retry 2 --max-time 900 -o vbga.iso "https://download.virtualbox.org/virtualbox/$V/VBoxGuestAdditions_$V.iso"; then
+    BOY=$(stat -c %s vbga.iso 2>/dev/null || echo 0)
+    echo "[KOK:A9:vbox] Oracle ISO indirildi ($BOY bayt, deneme $i)"
+    [ "$BOY" -gt 10000000 ] && ISO=$W/vbga.iso && break
+    echo "[KOK-UYARI:A9:vbox] ISO cok kucuk, tekrar denenecek"
+  fi
+  sleep 5
+done
+if [ -z "$ISO" ]; then
   echo "[KOK-UYARI:A9:vbox] Oracle ISO indirilemedi, Debian paketi denenecek"
-  apt-get install -y virtualbox-guest-additions-iso && ISO=/usr/share/virtualbox/VBoxGuestAdditions.iso
+  apt-get install -y virtualbox-guest-additions-iso >/dev/null 2>&1 && ISO=/usr/share/virtualbox/VBoxGuestAdditions.iso
 fi
 if [ -z "$ISO" ] || [ ! -f "$ISO" ]; then echo "[KOK-UYARI:A9:vbox] Guest Additions ISO bulunamadi"; exit 0; fi
-apt-get install -y libarchive-tools bzip2 >/dev/null 2>&1 || true
-if ! bsdtar -xf "$ISO" -C /tmp/vbx VBoxLinuxAdditions.run; then echo "[KOK-UYARI:A9:vbox] ISO acilamadi"; exit 0; fi
-sh /tmp/vbx/VBoxLinuxAdditions.run --noexec --target /tmp/vbx/x >/dev/null 2>&1 || echo "[KOK-UYARI:A9:vbox] .run acilamadi"
-TAR=$(ls /tmp/vbx/x/VBoxGuestAdditions-amd64.tar.* 2>/dev/null | head -1)
-if [ -z "$TAR" ]; then echo "[KOK-UYARI:A9:vbox] amd64 arsivi yok"; ls /tmp/vbx/x 2>&1 | head; exit 0; fi
+file "$ISO" 2>/dev/null | sed 's/^/[KOK:A9:vbox] ISO turu: /'
+RUN=""
+bul() { RUN=$(find $W/iso -iname 'VBoxLinuxAdditions.run*' -type f 2>/dev/null | head -1); [ -n "$RUN" ]; }
+# Yöntem 1: bsdtar
+if command -v bsdtar >/dev/null 2>&1; then
+  bsdtar -xf "$ISO" -C $W/iso 2>$W/e1.txt; bul && echo "[KOK:A9:vbox] bsdtar ile acildi" || { echo "[KOK-UYARI:A9:vbox] bsdtar basarisiz: $(head -c 200 $W/e1.txt)"; }
+fi
+# Yöntem 2: 7z
+if [ -z "$RUN" ]; then
+  S7=$(command -v 7z || command -v 7zz || command -v 7za)
+  if [ -n "$S7" ]; then
+    "$S7" x -y -o$W/iso "$ISO" >$W/e2.txt 2>&1; bul && echo "[KOK:A9:vbox] 7z ile acildi" || echo "[KOK-UYARI:A9:vbox] 7z basarisiz: $(tail -c 200 $W/e2.txt)"
+  fi
+fi
+# Yöntem 3: xorriso
+if [ -z "$RUN" ] && command -v xorriso >/dev/null 2>&1; then
+  xorriso -osirrox on -indev "$ISO" -extract / $W/iso >$W/e3.txt 2>&1; chmod -R u+rwX $W/iso 2>/dev/null; bul && echo "[KOK:A9:vbox] xorriso ile acildi" || echo "[KOK-UYARI:A9:vbox] xorriso basarisiz: $(tail -c 200 $W/e3.txt)"
+fi
+if [ -z "$RUN" ]; then echo "[KOK-UYARI:A9:vbox] ISO acilamadi (3 yontem de basarisiz)"; ls -la $W/iso | head; exit 0; fi
+echo "[KOK:A9:vbox] kurulum dosyasi: $RUN"
+sh "$RUN" --noexec --target $W/x >$W/e4.txt 2>&1 || echo "[KOK-UYARI:A9:vbox] .run acilamadi: $(tail -c 200 $W/e4.txt)"
+TAR=$(ls $W/x/VBoxGuestAdditions-amd64.tar.* 2>/dev/null | head -1)
+if [ -z "$TAR" ]; then echo "[KOK-UYARI:A9:vbox] amd64 arsivi yok"; ls $W/x 2>&1 | head; exit 0; fi
 mkdir -p /opt/VBoxGuestAdditions && tar -xf "$TAR" -C /opt/VBoxGuestAdditions
 CL=$(find /opt/VBoxGuestAdditions -name VBoxClient -type f | head -1)
 CT=$(find /opt/VBoxGuestAdditions -name VBoxControl -type f | head -1)
+CS=$(find /opt/VBoxGuestAdditions -name VBoxService -type f | head -1)
 [ -n "$CL" ] && ln -sf "$CL" /usr/bin/VBoxClient
 [ -n "$CT" ] && ln -sf "$CT" /usr/bin/VBoxControl
+[ -n "$CS" ] && ln -sf "$CS" /usr/bin/VBoxService
 if [ -n "$CL" ]; then
   echo "[KOK:A9:vbox] VBoxClient kuruldu: $CL"
   ldd "$CL" 2>&1 | grep 'not found' | sed 's/^/[KOK-UYARI:A9:vbox] eksik kutuphane: /' || true
 else
   echo "[KOK-UYARI:A9:vbox] VBoxClient bulunamadi"
 fi
-rm -rf /tmp/vbx
+rm -rf $W
 exit 0

@@ -1,4 +1,4 @@
-# Kök OS – live-build deposu (Adım 2-13, sürüm 0.7)
+# Kök OS – live-build deposu (Adım 2-15, sürüm 0.8)
 
 ## Gereksinimler
 Debian 12/13 veya Ubuntu çalışan bir bilgisayar (veya sanal makine), ~20 GB boş disk, internet.

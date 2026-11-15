@@ -3,6 +3,7 @@ Description=Kok OS canli oturum kullanicisini hazirla (kok / live)
 Wants=live-config.service
 After=live-config.service
 Before=display-manager.service getty@tty1.service
+ConditionKernelCommandLine=boot=live
 
 [Service]
 Type=oneshot

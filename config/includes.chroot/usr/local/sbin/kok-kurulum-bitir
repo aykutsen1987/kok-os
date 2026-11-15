@@ -1,0 +1,20 @@
+#!/bin/sh
+# Kurulum bittikten sonra HEDEF sistemde çalışır (Calamares kokbitir modülü, chroot içinde).
+echo "[KOK:KURULUM] kok-kurulum-bitir basladi"
+# 1) Canlı oturum kalıntılarını temizle (kurulu sistemde 'kok/live' hesabı ve otomatik giriş kalmasın)
+rm -f /etc/sudoers.d/live /etc/sudoers.d/*live* /etc/polkit-1/rules.d/49-kok-canli.rules 2>/dev/null
+rm -f /etc/systemd/system/multi-user.target.wants/kok-canli-parola.service 2>/dev/null
+mkdir -p /etc/lightdm/lightdm.conf.d
+printf '[Seat:*]\ngreeter-session=lightdm-gtk-greeter\nuser-session=xfce\n' > /etc/lightdm/lightdm.conf.d/50-kok.conf
+# 2) GRUB: bilgisayardaki diğer işletim sistemlerini (Windows vb.) açılış menüsüne ekle
+G=/etc/default/grub
+if [ -f "$G" ]; then
+  if grep -q '^#\?GRUB_DISABLE_OS_PROBER' "$G"; then sed -i 's/^#\?GRUB_DISABLE_OS_PROBER=.*/GRUB_DISABLE_OS_PROBER=false/' "$G"; else echo 'GRUB_DISABLE_OS_PROBER=false' >> "$G"; fi
+  if grep -q '^GRUB_TIMEOUT_STYLE' "$G"; then sed -i 's/^GRUB_TIMEOUT_STYLE=.*/GRUB_TIMEOUT_STYLE=menu/' "$G"; else echo 'GRUB_TIMEOUT_STYLE=menu' >> "$G"; fi
+  if grep -q '^GRUB_TIMEOUT=' "$G"; then sed -i 's/^GRUB_TIMEOUT=.*/GRUB_TIMEOUT=8/' "$G"; else echo 'GRUB_TIMEOUT=8' >> "$G"; fi
+  if grep -q '^GRUB_DISTRIBUTOR' "$G"; then sed -i 's/^GRUB_DISTRIBUTOR=.*/GRUB_DISTRIBUTOR="Kök OS"/' "$G"; fi
+fi
+if command -v os-prober >/dev/null 2>&1; then echo "[KOK:KURULUM] os-prober var"; else echo "[KOK:KURULUM] UYARI os-prober yok: diger sistemler menuye eklenmez"; fi
+command -v update-grub >/dev/null 2>&1 && update-grub 2>&1 | sed 's/^/[KOK:KURULUM] /'
+echo "[KOK:KURULUM] bitti"
+exit 0

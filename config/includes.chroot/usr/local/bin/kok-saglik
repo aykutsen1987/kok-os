@@ -99,7 +99,8 @@ bilgi "Kök OS sürümü: $(grep '^KOK_SURUM=' /etc/kok/surum 2>/dev/null | cut 
 baslik "ADIM 13 – Kimlik, dil, katalog, köşeler"
 if grep -q "boot=live" /proc/cmdline 2>/dev/null; then
   kontrol "Canlı oturumda parolasız yönetici yetkisi (sudo)" "live-config sudoers / kok-yetkili" sudo -n true
-  kontrol "Parolasız yetki kuralı (polkit)" "etc/polkit-1/rules.d/49-kok-canli.rules" test -f /etc/polkit-1/rules.d/49-kok-canli.rules
+  kontrol "Parolasız yetki kuralı (polkit)" "etc/polkit-1/rules.d/49-kok-canli.rules" sudo -n test -f /etc/polkit-1/rules.d/49-kok-canli.rules
+  kontrol "kok kullanıcısı hazır (hook 0165)" "hook 0165-kullanici, kok-kullanici-hazirla" id kok
   kontrol "Otomatik giriş yapılandırması" "etc/lightdm/lightdm.conf.d/50-kok.conf" grep -q 'autologin-user=kok' /etc/lightdm/lightdm.conf.d/50-kok.conf
 fi
 kontrol "Hakkında (i) aracı geçerli" "kok-hakkinda" python3 -c "import ast;ast.parse(open('/usr/local/bin/kok-hakkinda').read())"
@@ -112,12 +113,25 @@ kontrol "Dil değiştirme aracı" "kok-dil, kok-dil-uygula" test -x /usr/local/b
 kontrol "Android kataloğu geçerli (alanlar)" "android-katalog.json" python3 -c "import json;d=json.load(open('/usr/share/kok/android-katalog.json'));assert d['uygulamalar'] and all('ad' in u for u in d['uygulamalar'])"
 kontrol "picom (yuvarlak köşeler) kurulu" "kok-cila.list.chroot" command -v picom
 if [ "$(cat /tmp/kok/profil 2>/dev/null)" = "standart" ] && [ ! -f "$HOME/.config/kok/yuvarlak-kapali" ]; then
-  kontrol "picom çalışıyor (standart profil)" "kok-profil, picom.conf" pgrep -x picom
+  kontrol "picom çalışıyor (standart profil)" "kok-picom-baslat, ~/.local/state/kok/picom.log" bash -c 'for i in 1 2 3 4 5 6; do pgrep -x picom >/dev/null && exit 0; sleep 5; done; exit 1'
 else bilgi "picom beklenmiyor (hafif profil veya köşeler kapalı)"; fi
 bilgi "Aktif dil: $(grep '^LANG=' /etc/default/locale 2>/dev/null)  Oturum: $LANG"
 bilgi "GitHub depo ayarı: $(grep '^GITHUB_DEPO=' /etc/kok/geri-bildirim.conf 2>/dev/null | cut -d= -f2)"
 
 if [ "$(systemd-detect-virt 2>/dev/null)" = "oracle" ]; then
+baslik "ADIM 14-15 – Kurulum, çift açılış, uygulama uyumluluğu"
+kontrol "Kurulum modülü: onay pencereleri (kokuyari)" "usr/local/lib/calamares/modules/kokuyari" test -f /usr/local/lib/calamares/modules/kokuyari/main.py
+kontrol "Kurulum modülü: son ayarlar (kokbitir)" "usr/local/lib/calamares/modules/kokbitir" test -f /usr/local/lib/calamares/modules/kokbitir/main.py
+kontrol "Kurulum sırasına eklendi (settings.conf)" "hook 0062-kurulum" grep -q kokuyari /etc/calamares/settings.conf
+kontrol "Diğer işletim sistemlerini bulma (os-prober)" "kok-kurulum.list.chroot" command -v os-prober
+kontrol "NTFS (Windows disk) desteği" "kok-kurulum.list.chroot" command -v ntfs-3g
+kontrol "UEFI + Secure Boot dosyaları (shim-signed)" "kok-kurulum.list.chroot" dpkg -s shim-signed
+kontrol "BIOS önyükleyici dosyaları (grub-pc-bin)" "kok-kurulum.list.chroot" dpkg -s grub-pc-bin
+kontrol "Flatpak (Linux uygulamaları)" "kok-uyumluluk.list.chroot" command -v flatpak
+kontrol "AppImage desteği (libfuse2)" "kok-uyumluluk.list.chroot" bash -c 'ls /usr/lib/x86_64-linux-gnu/libfuse.so.2* >/dev/null 2>&1'
+kontrol "Winetricks (Windows uygulamaları)" "kok-uyumluluk.list.chroot" command -v winetricks
+bilgi "macOS uygulamaları doğrudan çalışmaz; Flatpak/web/Wine eşdeğerleri önerilir (kılavuza bakın)"
+
 baslik "VirtualBox entegrasyonu (pano, ekran)"
 kontrol "VirtualBox konuk araçları (VBoxClient) kurulu" "hook 0125-vbox (resmi Guest Additions)" command -v VBoxClient
 kontrol "vboxguest çekirdek modülü" "çekirdek" bash -c "lsmod | grep -q vboxguest"

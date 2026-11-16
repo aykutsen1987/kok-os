@@ -45,13 +45,31 @@ if "bootloader" in yeni and modul_var("kokbitir"):
     yeni.insert(yeni.index("bootloader") + 1, "kokbitir")
 else:
     print("[KOK-UYARI:A14:kurulum] kokbitir eklenemedi")
-for i, s2 in enumerate(satirlar):
-    if re.match(r"^modules-search:", s2):
-        satirlar[i] = "modules-search: [ local, /usr/local/lib/calamares/modules ]"
-        print("[KOK:A14:kurulum] modules-search guncellendi")
-        break
-else:
-    satirlar.append("modules-search: [ local, /usr/local/lib/calamares/modules ]")
+BIZIM = "/usr/local/lib/calamares/modules"
+def arama_yolu_ekle(satirlar):
+    # Debian'ın mevcut arama yollarını KORU, sadece bizimkini sona ekle
+    for i, s2 in enumerate(satirlar):
+        m = re.match(r"^modules-search:\s*\[(.*)\]\s*(#.*)?$", s2)
+        if m:
+            ogeler = [x.strip() for x in m.group(1).split(",") if x.strip()]
+            if BIZIM not in ogeler:
+                ogeler.append(BIZIM)
+            satirlar[i] = "modules-search: [ " + ", ".join(ogeler) + " ]"
+            print("[KOK:A14:kurulum] modules-search: " + satirlar[i])
+            return
+        if re.match(r"^modules-search:\s*$", s2):
+            j = i + 1
+            son = i
+            while j < len(satirlar) and re.match(r"^\s*-\s*\S", satirlar[j]):
+                son = j
+                j += 1
+            if not any(BIZIM in satirlar[k] for k in range(i + 1, son + 1)):
+                gir = re.match(r"^(\s*)", satirlar[son]).group(1) if son > i else "  "
+                satirlar.insert(son + 1, gir + "- " + BIZIM)
+            print("[KOK:A14:kurulum] modules-search (liste) guncellendi")
+            return
+    print("[KOK-UYARI:A14:kurulum] modules-search satiri bulunamadi; dokunulmadi")
+arama_yolu_ekle(satirlar)
 yeni_satirlar = [girinti + "- " + b for b in yeni]
 # eski öğelerin arasındaki yorum/boş satırlar korunmaz; blok sade yeniden yazılır
 satirlar[cocuk[0]:cocuk[-1] + 1] = yeni_satirlar

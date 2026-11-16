@@ -6,6 +6,10 @@ rm -f /etc/sudoers.d/live /etc/sudoers.d/*live* /etc/polkit-1/rules.d/49-kok-can
 rm -f /etc/systemd/system/multi-user.target.wants/kok-canli-parola.service 2>/dev/null
 mkdir -p /etc/lightdm/lightdm.conf.d
 printf '[Seat:*]\ngreeter-session=lightdm-gtk-greeter\nuser-session=xfce\n' > /etc/lightdm/lightdm.conf.d/50-kok.conf
+# 1b) Bilgisayar adı (kurulumda sorulmaz)
+H=$(cat /etc/hostname 2>/dev/null)
+case "$H" in ""|debian|live|kok-os) echo kok-os > /etc/hostname
+  grep -q "127.0.1.1" /etc/hosts 2>/dev/null && sed -i 's/^127\.0\.1\.1.*/127.0.1.1\tkok-os/' /etc/hosts || echo "127.0.1.1	kok-os" >> /etc/hosts ;; esac
 # 2) GRUB: bilgisayardaki diğer işletim sistemlerini (Windows vb.) açılış menüsüne ekle
 G=/etc/default/grub
 if [ -f "$G" ]; then

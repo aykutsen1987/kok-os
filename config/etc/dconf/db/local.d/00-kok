@@ -1,0 +1,9 @@
+[net/launchpad/plank/docks/dock1]
+zoom-enabled=false
+icon-size=48
+hide-mode='intelligent'
+theme='Transparent'
+position='bottom'
+alignment='center'
+items-alignment='center'
+dock-items=['thunar.dockitem','firefox-esr.dockitem','vlc.dockitem','kok-uygulamalar.dockitem','mousepad.dockitem','xfce4-terminal.dockitem','kok-ayarlar.dockitem']

@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Name=Kök Otomatik Döndürme
+Exec=/usr/local/bin/kok-donder --izle
+NoDisplay=true
+X-GNOME-Autostart-Delay=3

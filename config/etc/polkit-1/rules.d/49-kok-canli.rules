@@ -1,0 +1,10 @@
+// Kök OS: yalnızca CANLI oturumda 'kok' kullanıcısı için yönetici işlemleri parola sormadan yapılır.
+// Kurulu sistemde bu kural çalışmaz (normal parola istenir).
+polkit.addRule(function(action, subject) {
+    if (subject.user == "kok" && subject.local && subject.active) {
+        try {
+            polkit.spawn(["/usr/bin/test", "-e", "/run/live/medium"]);
+            return polkit.Result.YES;
+        } catch (e) { }
+    }
+});

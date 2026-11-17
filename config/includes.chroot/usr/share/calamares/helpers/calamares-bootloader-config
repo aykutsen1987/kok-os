@@ -40,8 +40,26 @@ fi
 
 mkdir -p $CHROOT/boot/grub
 G=$CHROOT/etc/default/grub
+# /etc/default/grub normalde grub-pc/grub-efi paketlerinin kurulum betiğiyle oluşur; biz o paketleri
+# kurmadığımız için dosyayı, grub2-common'un verdiği şablondan kendimiz oluşturuyoruz.
 if [ ! -f "$G" ]; then
-    echo "HATA: /etc/default/grub yok"
+    mkdir -p $CHROOT/etc/default
+    if [ -f $CHROOT/usr/share/grub/default/grub ]; then
+        echo " * /etc/default/grub şablondan oluşturuluyor"
+        cp $CHROOT/usr/share/grub/default/grub "$G"
+    else
+        echo " * /etc/default/grub yedek içerikle oluşturuluyor"
+        cat > "$G" <<'GRUBVARSAYILAN'
+GRUB_DEFAULT=0
+GRUB_TIMEOUT=5
+GRUB_DISTRIBUTOR="Kok OS"
+GRUB_CMDLINE_LINUX_DEFAULT="quiet"
+GRUB_CMDLINE_LINUX=""
+GRUBVARSAYILAN
+    fi
+fi
+if [ ! -f "$G" ]; then
+    echo "HATA: /etc/default/grub oluşturulamadı"
     exit 2
 fi
 
@@ -51,6 +69,10 @@ if grep -q '^#\?GRUB_DISABLE_OS_PROBER' "$G"; then
 else
     echo 'GRUB_DISABLE_OS_PROBER=false' >> "$G"
 fi
+
+# Açılışta GRUB menüsü görünsün (iki işletim sistemi varsa seçim yapılabilsin)
+if grep -q '^GRUB_TIMEOUT_STYLE' "$G"; then sed -i 's/^GRUB_TIMEOUT_STYLE=.*/GRUB_TIMEOUT_STYLE=menu/' "$G"; else echo 'GRUB_TIMEOUT_STYLE=menu' >> "$G"; fi
+if grep -q '^GRUB_TIMEOUT=' "$G"; then sed -i 's/^GRUB_TIMEOUT=.*/GRUB_TIMEOUT=8/' "$G"; else echo 'GRUB_TIMEOUT=8' >> "$G"; fi
 
 chroot $CHROOT /usr/sbin/update-grub || echo " ! uyarı: update-grub hata verdi (bootloader modülü yeniden deneyecek)"
 exit 0

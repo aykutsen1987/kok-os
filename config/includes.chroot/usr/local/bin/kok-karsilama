@@ -55,7 +55,7 @@ class Pencere(Gtk.Window):
         k.pack_start(b, False, False, 0)
         self.d(k, "Dil / Language", lambda: calistir([BIN + "/kok-ayarlar", "--sekme", "dil"]))
         if canli():
-            self.d(k, "Kök OS'u Diske Kur", lambda: calistir(["sudo", "-E", "calamares"]))
+            self.d(k, "Kök OS'u Diske Kur", lambda: calistir(["/usr/local/bin/kok-kur"]))
         self.d(k, "Ağ ve Wi-Fi Ayarları", lambda: calistir(["nm-connection-editor"]))
         self.d(k, "Android Uygulamaları", lambda: calistir([BIN + "/kok-uygulamalar"]))
         self.d(k, "Kök Ayarlar", lambda: calistir([BIN + "/kok-ayarlar"]))

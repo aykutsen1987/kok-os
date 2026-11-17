@@ -45,25 +45,61 @@ def kurulu_paketler():
         return set()
 
 
+GENEL_IKON = "/usr/share/kok/ikon-uygulama.png"
+YEREL_IKONLAR = "/usr/share/kok/ikonlar"
+
+
+def _yuklenebilir(yol):
+    try:
+        GdkPixbuf.Pixbuf.new_from_file_at_scale(yol, 16, 16, True)
+        return True
+    except Exception:
+        return False
+
+
+def _png_yap(veri):
+    """Gelen resmi (WebP/JPEG dahil) 128 px PNG'ye çevirir; Pillow yoksa olduğu gibi bırakır."""
+    try:
+        import io
+        from PIL import Image
+        im = Image.open(io.BytesIO(veri)).convert("RGBA")
+        im.thumbnail((128, 128))
+        b = io.BytesIO()
+        im.save(b, "PNG")
+        return b.getvalue()
+    except Exception:
+        return veri
+
+
 def ikon_yolu(u):
-    """Simge: yerel dosya ya da https adresi (önbelleğe indirilir)."""
+    """Simge sırası: 1) ISO'ya gömülü yerel dosya 2) önbellek/internet 3) genel uygulama simgesi."""
+    paket = u.get("paket", "")
+    if paket:
+        y = os.path.join(YEREL_IKONLAR, paket + ".png")
+        if os.path.exists(y) and _yuklenebilir(y):
+            return y
     ik = u.get("ikon", "")
-    if not ik:
-        return ""
-    if ik.startswith("/"):
-        return ik if os.path.exists(ik) else ""
-    if ik.startswith("https://"):
-        hedef = os.path.join(ONBELLEK, "ikon", hashlib.sha1(ik.encode()).hexdigest() + ".img")
-        if not os.path.exists(hedef):
-            try:
-                os.makedirs(os.path.dirname(hedef), exist_ok=True)
-                with urllib.request.urlopen(ik, timeout=8) as r, open(hedef, "wb") as f:
-                    f.write(r.read(2_000_000))
-            except Exception as e:
-                hata("ikon", ik, e)
-                return ""
-        return hedef
-    return ""
+    if ik.startswith("/") and os.path.exists(ik) and _yuklenebilir(ik):
+        return ik
+    url = u.get("ikon_url") or ik
+    if url.startswith("https://"):
+        adres = url if "=" in url.rsplit("/", 1)[-1] else url + "=s128"
+        hedef = os.path.join(ONBELLEK, "ikon", hashlib.sha1(adres.encode()).hexdigest() + ".png")
+        if os.path.exists(hedef) and _yuklenebilir(hedef):
+            return hedef
+        try:
+            os.makedirs(os.path.dirname(hedef), exist_ok=True)
+            istek = urllib.request.Request(adres, headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) KokOS",
+                                                           "Accept": "image/png,image/*;q=0.8"})
+            with urllib.request.urlopen(istek, timeout=10) as r:
+                veri = _png_yap(r.read(3_000_000))
+            with open(hedef, "wb") as f:
+                f.write(veri)
+            if _yuklenebilir(hedef):
+                return hedef
+        except Exception as e:
+            hata("ikon", adres, e)
+    return GENEL_IKON if os.path.exists(GENEL_IKON) else ""
 
 
 def katalog_yukle(url):
@@ -94,8 +130,10 @@ def katalog_yukle(url):
     adlar = {u.get("ad") for u in uzak}
     liste = uzak + [u for u in gomulu if u.get("ad") not in adlar]
     liste.sort(key=lambda u: (not u.get("oner", False), u.get("ad", "").lower()))
-    for u in liste:
-        u["_ikon"] = ikon_yolu(u)
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(8) as havuz:
+        for u, yol in zip(liste, havuz.map(ikon_yolu, liste)):
+            u["_ikon"] = yol
     return liste, mesaj
 
 

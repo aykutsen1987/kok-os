@@ -130,6 +130,7 @@ kontrol "BIOS önyükleyici dosyaları (grub-pc-bin)" "kok-kurulum.list.chroot" 
 kontrol "Flatpak (Linux uygulamaları)" "kok-uyumluluk.list.chroot" command -v flatpak
 kontrol "AppImage desteği (libfuse2)" "kok-uyumluluk.list.chroot" bash -c 'ls /usr/lib/x86_64-linux-gnu/libfuse.so.2* >/dev/null 2>&1'
 kontrol "Winetricks (Windows uygulamaları)" "kok-uyumluluk.list.chroot" command -v winetricks
+bilgi "Gömülü Android simgesi: $(ls /usr/share/kok/ikonlar 2>/dev/null | wc -l) / 64 (eksikler genel simgeyle gösterilir)"
 bilgi "macOS uygulamaları doğrudan çalışmaz; Flatpak/web/Wine eşdeğerleri önerilir (kılavuza bakın)"
 
 baslik "VirtualBox entegrasyonu (pano, ekran)"

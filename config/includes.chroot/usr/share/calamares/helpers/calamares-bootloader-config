@@ -1,0 +1,56 @@
+#!/bin/bash
+# Kök OS – önyükleyici (GRUB) hazırlığı. İNTERNET GEREKTİRMEZ.
+# Debian'ın özgün betiği 'apt-get install grub-pc / grub-efi' ile paketleri internetten kuruyordu;
+# bağlantı yokken kurulum "Kurulum başarısız oldu" ile çöküyordu. GRUB dosyaları artık canlı sistemden gelir.
+
+CHROOT=$(mount | grep proc | grep calamares | awk '{print $3}' | sed -e "s#/proc##g")
+
+# Şifreli disk (LUKS) için gerekli araçlar (özgün betikteki gibi)
+if [ "$(mount | grep $CHROOT" " | cut -c -16)" = "/dev/mapper/luks" ]; then
+    echo "UMASK=0077" > $CHROOT/etc/initramfs-tools/conf.d/initramfs-permissions
+    chroot $CHROOT apt-get -y install cryptsetup-initramfs cryptsetup keyutils
+fi
+
+echo "Running bootloader-config (Kök OS, çevrimdışı)..."
+
+if [ -d /sys/firmware/efi/efivars ]; then
+    FW=efi;  BIN=grub-efi-amd64-bin
+else
+    FW=bios; BIN=grub-pc-bin
+fi
+echo " * donanım yazılımı türü: $FW"
+
+# Gerekli paketler hedef sistemde var mı?
+EKSIK=""
+for p in grub-common grub2-common "$BIN" os-prober; do
+    chroot $CHROOT dpkg -s "$p" >/dev/null 2>&1 || EKSIK="$EKSIK $p"
+done
+if [ "$FW" = "efi" ]; then
+    for p in grub-efi-amd64-signed shim-signed efibootmgr; do
+        chroot $CHROOT dpkg -s "$p" >/dev/null 2>&1 || echo " ! uyarı: $p yok (Secure Boot olmayabilir)"
+    done
+fi
+if [ -n "$EKSIK" ]; then
+    echo " ! eksik paketler:$EKSIK  -> internetten kurmayı deniyorum"
+    DEBIAN_FRONTEND=noninteractive chroot $CHROOT apt-get -y install $EKSIK || {
+        echo "HATA: önyükleyici dosyaları bulunamadı ve internet yok."
+        exit 2
+    }
+fi
+
+mkdir -p $CHROOT/boot/grub
+G=$CHROOT/etc/default/grub
+if [ ! -f "$G" ]; then
+    echo "HATA: /etc/default/grub yok"
+    exit 2
+fi
+
+# Bilgisayardaki diğer işletim sistemlerini (Windows vb.) menüye ekle
+if grep -q '^#\?GRUB_DISABLE_OS_PROBER' "$G"; then
+    sed -i 's/^#\?GRUB_DISABLE_OS_PROBER=.*/GRUB_DISABLE_OS_PROBER=false/' "$G"
+else
+    echo 'GRUB_DISABLE_OS_PROBER=false' >> "$G"
+fi
+
+chroot $CHROOT /usr/sbin/update-grub || echo " ! uyarı: update-grub hata verdi (bootloader modülü yeniden deneyecek)"
+exit 0

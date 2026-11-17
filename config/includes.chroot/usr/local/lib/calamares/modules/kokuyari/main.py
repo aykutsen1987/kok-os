@@ -1,39 +1,66 @@
 #!/usr/bin/env python3
-# Kök OS: diskte değişiklik yapılmadan ÖNCE kullanıcıya açık uyarı gösterir.
-#  - Yanına kur  : YEŞİL bilgi (diğer işletim sistemleri korunur)
+# Kök OS: diskte değişiklik yapılmadan ÖNCE kullanıcıya açık, renkli uyarı gösterir.
+#  - Yanına kur      : YEŞİL bilgi (diğer işletim sistemleri korunur)
 #  - Bölümü değiştir : TURUNCU uyarı
-#  - Diski sil   : KIRMIZI uyarı + onay + "SIL" yazdırma (vazgeçilirse hiçbir şey yapılmaz)
+#  - Diski sil       : KIRMIZI uyarı + "SIL" yazdırma (vazgeçilirse diske hiç dokunulmaz)
 import os
 import subprocess
 
 import libcalamares
+
+KULLANICI = "kok"
 
 
 def pretty_name():
     return "Kök OS kurulum onayı"
 
 
-def _zenity(argumanlar):
-    """Canlı oturumun ekranında zenity penceresi açar. Dönüş: çıkış kodu, ya da pencere açılamazsa None."""
-    kullanici = "kok"
+def _calistir(komut):
     ortam = ["DISPLAY=" + os.environ.get("DISPLAY", ":0"),
-             "XAUTHORITY=/home/{}/.Xauthority".format(kullanici)]
-    komut = ["runuser", "-u", kullanici, "--", "env"] + ortam + ["zenity"] + argumanlar
+             "XAUTHORITY=/home/{}/.Xauthority".format(KULLANICI)]
+    tam = ["runuser", "-u", KULLANICI, "--", "env"] + ortam + komut
     try:
-        sonuc = subprocess.run(komut, capture_output=True, text=True)
+        return subprocess.run(tam, capture_output=True, text=True).returncode
     except Exception as hata:
-        libcalamares.utils.warning("zenity calistirilamadi: {}".format(hata))
-        return None, ""
-    if sonuc.returncode not in (0, 1, 5):
-        libcalamares.utils.warning("zenity kod {}: {}".format(sonuc.returncode, sonuc.stderr[:200]))
-        return None, ""
-    return sonuc.returncode, sonuc.stdout.strip()
+        libcalamares.utils.warning("pencere acilamadi: {}".format(hata))
+        return None
+
+
+def _diyalog(tur, baslik, metin, evet, hayir="", yaz="", sure=0):
+    """Renkli pencere. Dönüş: 0 onay, 1 vazgeç, 5 süre doldu, None = pencere açılamadı."""
+    komut = ["/usr/local/bin/kok-diyalog", "--tur", tur, "--baslik", baslik, "--metin", metin, "--evet", evet]
+    if hayir:
+        komut += ["--hayir", hayir]
+    if yaz:
+        komut += ["--yaz", yaz]
+    if sure:
+        komut += ["--sure", str(sure)]
+    kod = _calistir(komut)
+    if kod in (0, 1, 5):
+        return kod
+    libcalamares.utils.warning("kok-diyalog kod {}; zenity denenecek".format(kod))
+    return None
+
+
+def _zenity_onay(baslik, metin, yaz=""):
+    """Yedek: sade zenity penceresi (işaretleme YOK, düz metin)."""
+    kod = _calistir(["zenity", "--question", "--width=520", "--title=" + baslik, "--text=" + metin,
+                     "--ok-label=Devam et", "--cancel-label=Vazgeç"])
+    if kod == 0 and yaz:
+        sonuc = subprocess.run(["runuser", "-u", KULLANICI, "--", "env",
+                                "DISPLAY=" + os.environ.get("DISPLAY", ":0"),
+                                "XAUTHORITY=/home/{}/.Xauthority".format(KULLANICI),
+                                "zenity", "--entry", "--title=Son onay",
+                                "--text=Tüm veriyi silmek için büyük harfle {} yazın.".format(yaz)],
+                               capture_output=True, text=True)
+        girilen = sonuc.stdout.strip().upper().replace("İ", "I")
+        return 0 if sonuc.returncode == 0 and girilen == yaz else 1
+    return kod
 
 
 def _secim():
-    gs = libcalamares.globalstorage
     try:
-        secimler = gs.value("partitionChoices")
+        secimler = libcalamares.globalstorage.value("partitionChoices")
         if isinstance(secimler, dict):
             return str(secimler.get("install", "manual"))
     except Exception:
@@ -44,44 +71,33 @@ def _secim():
 def run():
     secim = _secim()
     libcalamares.utils.debug("Kök kurulum modu: {}".format(secim))
+    iptal = ("Kurulum iptal edildi", "Onay verilmedi. Diskte hiçbir değişiklik yapılmadı.")
 
     if secim == "erase":
-        kod, _ = _zenity([
-            "--question", "--width=560", "--title=Kök OS – DİKKAT: Tüm disk silinecek",
-            "--ok-label=Evet, diski sil", "--cancel-label=Vazgeç (güvenli)",
-            "--text=<span foreground='#d32f2f' size='x-large'><b>⚠  TÜM DİSK SİLİNECEK</b></span>\n\n"
-            "Seçtiğiniz diskteki <b>bütün bölümler ve dosyalar</b> (Windows, diğer Linux sistemleri, "
-            "belgeler, fotoğraflar dahil) <span foreground='#d32f2f'><b>kalıcı olarak silinecek</b></span> "
-            "ve <b>geri alınamaz</b>.\n\n"
-            "Diğer işletim sistemlerini korumak istiyorsanız <b>Vazgeç</b>'e basın ve "
-            "kurulumda «Yanına kur» seçeneğini seçin."])
-        if kod == 1 or kod == 5:
-            return ("Kurulum iptal edildi", "Diski silme işlemi onaylanmadı. Diskte hiçbir değişiklik yapılmadı.")
-        if kod == 0:
-            kod2, yazi = _zenity([
-                "--entry", "--width=480", "--title=Son onay",
-                "--ok-label=Diski sil ve kur", "--cancel-label=Vazgeç",
-                "--text=<span foreground='#d32f2f'><b>Son onay:</b></span> tüm veriyi silmek için "
-                "aşağıya büyük harfle <b>SIL</b> yazın."])
-            temiz = (yazi or "").strip().upper().replace("İ", "I")
-            if kod2 != 0 or temiz != "SIL":
-                return ("Kurulum iptal edildi", "Son onay verilmedi. Diskte hiçbir değişiklik yapılmadı.")
+        metin = ("Seçtiğiniz diskteki <b>bütün bölümler ve dosyalar</b> (Windows, diğer sistemler, belgeler, "
+                 "fotoğraflar dahil) <span foreground='#C62828'><b>kalıcı olarak silinecek</b></span> ve geri alınamaz."
+                 "\n\nDiğer işletim sistemlerini korumak istiyorsanız <b>Vazgeç</b>'e basın ve kurulumda "
+                 "«Yanına kur» seçeneğini seçin.")
+        kod = _diyalog("red", "TÜM DİSK SİLİNECEK", metin, "Diski sil ve kur", "Vazgeç (güvenli)", yaz="SIL")
+        if kod is None:
+            kod = _zenity_onay("Kök OS – DİKKAT",
+                               "Seçtiğiniz diskteki BÜTÜN veriler kalıcı olarak silinecek. Emin misiniz?", yaz="SIL")
+        if kod != 0:
+            return iptal
 
     elif secim == "replace":
-        kod, _ = _zenity([
-            "--question", "--width=520", "--title=Kök OS – Bölüm değiştirilecek",
-            "--ok-label=Devam et", "--cancel-label=Vazgeç",
-            "--text=<span foreground='#ef6c00' size='x-large'><b>⚠  Seçilen bölüm silinecek</b></span>\n\n"
-            "Seçtiğiniz bölümün içindeki <b>tüm veriler silinir</b>. Diğer bölümlere dokunulmaz."])
-        if kod == 1 or kod == 5:
-            return ("Kurulum iptal edildi", "Bölüm değiştirme onaylanmadı. Diskte hiçbir değişiklik yapılmadı.")
+        metin = ("Seçtiğiniz bölümün içindeki <b>tüm veriler silinir</b>. Diğer bölümlere dokunulmaz.")
+        kod = _diyalog("orange", "BÖLÜM DEĞİŞTİRİLECEK", metin, "Devam et", "Vazgeç")
+        if kod is None:
+            kod = _zenity_onay("Kök OS – Bölüm değiştirilecek",
+                               "Seçtiğiniz bölümün içindeki tüm veriler silinecek. Devam edilsin mi?")
+        if kod != 0:
+            return iptal
 
     elif secim == "alongside":
-        _zenity([
-            "--info", "--width=520", "--timeout=15", "--title=Kök OS – Güvenli kurulum",
-            "--text=<span foreground='#2e7d32' size='x-large'><b>✔  GÜVENLİ KURULUM</b></span>\n\n"
-            "Windows ve diğer işletim sistemleri <b>silinmeyecek</b>. Kök OS, ayrılan boş alana kurulacak.\n"
-            "Bilgisayar açılırken bir menüden işletim sistemini seçebileceksiniz.\n\n"
-            "<i>Öneri: bölüm küçültmeden önce önemli dosyalarınızı yedekleyin.</i>"])
+        metin = ("Windows ve diğer işletim sistemleri <b>silinmeyecek</b>. Kök OS, ayrılan boş alana kurulacak. "
+                 "Bilgisayar açılırken bir menüden işletim sistemini seçebileceksiniz."
+                 "\n\n<i>Öneri: bölüm küçültmeden önce önemli dosyalarınızı yedekleyin.</i>")
+        _diyalog("green", "GÜVENLİ KURULUM", metin, "Tamam, devam et", sure=20)
 
     return None

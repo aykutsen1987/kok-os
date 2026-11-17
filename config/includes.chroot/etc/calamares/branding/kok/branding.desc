@@ -3,7 +3,7 @@ componentName: kok
 welcomeStyleCalamares: true
 welcomeExpandingLogo: true
 windowExpanding: normal
-windowSize: 800px,520px
+windowSize: 920px,600px
 windowPlacement: center
 strings:
   productName: Kök OS
@@ -24,7 +24,7 @@ images:
 slideshow: "show.qml"
 slideshowAPI: 2
 style:
-  sidebarBackground: "#1B1F2A"
-  sidebarText: "#FFFFFF"
-  sidebarTextSelect: "#4DA3FF"
-  sidebarTextHighlight: "#2A3142"
+  sidebarBackground: "#0F2A47"
+  sidebarText: "#C9D6E8"
+  sidebarTextSelect: "#FFFFFF"
+  sidebarTextHighlight: "#1976D2"

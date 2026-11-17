@@ -10,3 +10,5 @@ exfatprogs
 btrfs-progs
 cryptsetup
 gparted
+grub-common
+grub2-common

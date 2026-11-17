@@ -2,7 +2,7 @@
 KOK_ADIM="A14"; KOK_MOD="kurulum"
 echo "[KOK:$KOK_ADIM:$KOK_MOD] BASLADI"
 trap 'k=$?; if [ $k -ne 0 ]; then echo "[KOK-HATA:$KOK_ADIM:$KOK_MOD] kod=$k"; else echo "[KOK:$KOK_ADIM:$KOK_MOD] TAMAM"; fi' EXIT
-chmod +x /usr/local/sbin/kok-kurulum-bitir 2>/dev/null
+chmod +x /usr/local/sbin/kok-kurulum-bitir /usr/local/bin/kok-diyalog /usr/local/bin/kok-kur 2>/dev/null
 if [ ! -f /etc/calamares/settings.conf ]; then echo "[KOK-UYARI:A14:kurulum] settings.conf yok"; exit 0; fi
 python3 - <<'PY'
 import os, re, sys
@@ -76,4 +76,24 @@ satirlar[cocuk[0]:cocuk[-1] + 1] = yeni_satirlar
 open(p, "w", encoding="utf-8").write("\n".join(satirlar))
 print("[KOK:A14:kurulum] exec sirasi: " + " > ".join(yeni))
 PY
+chmod +x /usr/share/calamares/helpers/calamares-* 2>/dev/null
+# Çevrimdışı önyükleyici betiği yerinde mi? (yoksa kurulum internetsiz çöker)
+if grep -q "çevrimdışı" /usr/share/calamares/helpers/calamares-bootloader-config 2>/dev/null; then
+  echo "[KOK:A14:kurulum] cevrimdisi bootloader-config yerinde"
+else
+  echo "[KOK-HATA:A14:kurulum] bootloader-config OZGUN (internet isteyen) surumde; kurulum internetsiz calismaz"
+  exit 1
+fi
+# Önyükleyici için zorunlu paketler (eksikse ISO üretilmesin)
+EKSIK=""
+for p in grub-common grub2-common grub-pc-bin grub-efi-amd64-bin os-prober; do
+  dpkg -s $p >/dev/null 2>&1 || EKSIK="$EKSIK $p"
+done
+if [ -n "$EKSIK" ]; then
+  echo "[KOK-HATA:A14:kurulum] zorunlu paket eksik:$EKSIK"
+  exit 1
+fi
+for p in grub-efi-amd64-signed shim-signed efibootmgr ntfs-3g; do
+  dpkg -s $p >/dev/null 2>&1 && echo "[KOK:A14:kurulum] kurulu: $p" || echo "[KOK-UYARI:A14:kurulum] eksik: $p"
+done
 exit 0

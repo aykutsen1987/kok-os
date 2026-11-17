@@ -1,6 +1,0 @@
-[Desktop Entry]
-Type=Application
-Name=Blueman Applet
-Comment=Bluetooth donanımı varsa başlar
-Exec=sh -c "ls /sys/class/bluetooth/hci* >/dev/null 2>&1 && exec blueman-applet; exit 0"
-NoDisplay=true

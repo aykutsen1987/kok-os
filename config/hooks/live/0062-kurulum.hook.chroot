@@ -77,6 +77,12 @@ open(p, "w", encoding="utf-8").write("\n".join(satirlar))
 print("[KOK:A14:kurulum] exec sirasi: " + " > ".join(yeni))
 PY
 chmod +x /usr/share/calamares/helpers/calamares-* 2>/dev/null
+# /etc/default/grub ISO'da hazır olsun (kurulu sistem bunu kopyalar)
+if [ ! -f /etc/default/grub ] && [ -f /usr/share/grub/default/grub ]; then
+  mkdir -p /etc/default && cp /usr/share/grub/default/grub /etc/default/grub
+  echo "[KOK:A14:kurulum] /etc/default/grub sablondan olusturuldu"
+fi
+[ -f /etc/default/grub ] || { echo "[KOK-HATA:A14:kurulum] /etc/default/grub yok ve sablon bulunamadi (grub2-common eksik)"; exit 1; }
 # Çevrimdışı önyükleyici betiği yerinde mi? (yoksa kurulum internetsiz çöker)
 if grep -q "çevrimdışı" /usr/share/calamares/helpers/calamares-bootloader-config 2>/dev/null; then
   echo "[KOK:A14:kurulum] cevrimdisi bootloader-config yerinde"

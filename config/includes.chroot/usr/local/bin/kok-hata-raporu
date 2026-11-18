@@ -19,7 +19,7 @@ komut id
 komut cat /proc/cmdline
 
 bolum "[SAĞLIK ÖZETİ – adım adım TAMAM/SORUN]"
-/usr/local/bin/kok-saglik 2>&1
+/usr/local/bin/kok-saglik --ayrintili 2>&1
 
 bolum "[ADIM 2] Çekirdek, bellek, yerelleştirme, servisler (hook: 0010, 0020)"
 komut zramctl

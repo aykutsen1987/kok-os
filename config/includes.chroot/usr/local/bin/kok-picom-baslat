@@ -9,7 +9,8 @@ R=$(cat "$HOME/.config/kok/kose-yaricap" 2>/dev/null)
 case "$R" in ''|*[!0-9]*) R=14;; esac
 yaz "kok-picom-baslat basladi (picom: $(command -v picom || echo YOK), $(picom --version 2>&1 | head -1), yaricap=$R)"
 command -v picom >/dev/null 2>&1 || { yaz "picom kurulu degil"; exit 1; }
-pgrep -x picom >/dev/null && { yaz "picom zaten calisiyor"; exit 0; }
+if pgrep -f "picom --config $CONF" >/dev/null; then yaz "picom zaten calisiyor (Kok ayariyla)"; exit 0; fi
+if pgrep -x picom >/dev/null; then yaz "baska bir picom bulundu (varsayilan ayarlarla); kapatiliyor"; pkill -x picom; sleep 1; fi
 for i in $(seq 1 20); do pgrep -x xfwm4 >/dev/null && break; sleep 1; done
 xfconf-query -c xfwm4 -p /general/use_compositing -n -t bool -s false >>"$LOG" 2>&1
 for i in $(seq 1 10); do

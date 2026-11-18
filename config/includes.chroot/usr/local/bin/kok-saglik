@@ -40,7 +40,7 @@ baslik "ADIM 5 – Kurulum sihirbazı ve marka"
 kontrol "Calamares kurulu" "paket calamares" command -v calamares
 kontrol "Kök marka dosyası" "branding/kok" test -f /etc/calamares/branding/kok/branding.desc
 kontrol "Calamares markası 'kok' (kurulu sistemde Calamares kaldırılır)" "hook 0060" bash -c '[ ! -f /etc/calamares/settings.conf ] || grep -q "^branding: *kok" /etc/calamares/settings.conf'
-kontrol "Sistem adı Kök OS" "hook 0070" grep -q 'Kök OS' /etc/os-release
+if grep -q 'Kök OS' /etc/os-release; then ok "Sistem adı Kök OS"; else sorun "Sistem adı Kök OS görünmüyor (şu an: $(grep '^PRETTY_NAME=' /etc/os-release | cut -d= -f2))" "hook 0070, kok-marka.service"; fi
 kontrol "Hata raporu aracı" "kok-hata-raporu" test -x /usr/local/bin/kok-hata-raporu
 
 baslik "ADIM 6 – Görünüm ve Kök Ayarlar"
@@ -69,6 +69,9 @@ kontrol "Disk zamanlayıcı kuralı" "etc/udev/rules.d/60-kok-disk.rules" test -
 kontrol "Hızlı kapanış ayarı (10 sn)" "system.conf.d/kok.conf" bash -c "systemctl show -p DefaultTimeoutStopUSec | grep -q '10s'"
 kontrol "Performans aracı" "kok-performans" test -x /usr/local/bin/kok-performans
 bilgi "Açılış: $(systemd-analyze 2>/dev/null | head -1 | cut -c1-90)"
+US=$(systemd-analyze 2>/dev/null | head -1 | sed -n 's/.*+ \(.*\) (userspace).*/\1/p')
+SN=$(echo "$US" | awk '{s=0; for(i=1;i<=NF;i++){ if($i ~ /min$/){s+=$i*60} else if($i ~ /s$/){s+=$i} } print int(s)}')
+if [ -n "$SN" ] && [ "$SN" -gt 60 ]; then sorun "Açılış yavaş (${SN} sn). En yavaş servisler: $(systemd-analyze blame --no-pager 2>/dev/null | head -3 | sed 's/^ *//' | tr '\n' ';')" "açılış servisleri"; fi
 bilgi "Boşta bellek kullanımı: $(free -m | awk 'NR==2{print $3" MB / "$2" MB"}')"
 
 baslik "ADIM 10 – Donanım, dokunmatik, güç"
@@ -113,7 +116,8 @@ kontrol "Dil değiştirme aracı" "kok-dil, kok-dil-uygula" test -x /usr/local/b
 kontrol "Android kataloğu geçerli (alanlar)" "android-katalog.json" python3 -c "import json;d=json.load(open('/usr/share/kok/android-katalog.json'));assert d['uygulamalar'] and all('ad' in u for u in d['uygulamalar'])"
 kontrol "picom (yuvarlak köşeler) kurulu" "kok-cila.list.chroot" command -v picom
 if [ "$(cat /tmp/kok/profil 2>/dev/null)" = "standart" ] && [ ! -f "$HOME/.config/kok/yuvarlak-kapali" ]; then
-  kontrol "picom çalışıyor (standart profil)" "kok-picom-baslat, ~/.local/state/kok/picom.log" bash -c 'for i in 1 2 3 4 5 6; do pgrep -x picom >/dev/null && exit 0; sleep 5; done; exit 1'
+  if bash -c 'for i in 1 2 3 4 5 6; do pgrep -x picom >/dev/null && exit 0; sleep 5; done; exit 1'; then ok "picom çalışıyor"; else sorun "Köşe yuvarlama çalışmıyor. Günlük: $(tail -n 4 "$HOME/.local/state/kok/picom.log" 2>/dev/null | tr '
+' ' ' | cut -c1-260)" "kok-picom-baslat"; fi
 else bilgi "picom beklenmiyor (hafif profil veya köşeler kapalı)"; fi
 bilgi "Aktif dil: $(grep '^LANG=' /etc/default/locale 2>/dev/null)  Oturum: $LANG"
 bilgi "GitHub depo ayarı: $(grep '^GITHUB_DEPO=' /etc/kok/geri-bildirim.conf 2>/dev/null | cut -d= -f2)"
@@ -149,14 +153,31 @@ else
 fi
 
 baslik "Ağ"
-if ping -c1 -W2 1.1.1.1 >/dev/null 2>&1; then ok "İnternet bağlantısı var"; else sorun "İnternet bağlantısı yok" "NetworkManager / VM ağ ayarı"; fi
+if ping -c1 -W2 1.1.1.1 >/dev/null 2>&1; then ok "İnternet bağlantısı var"; else bilgi "İnternet bağlantısı yok (kurulum ve kullanım için gerekmez; güncelleme için gerekir)"; fi
 
 echo; echo "== ADIM TABLOSU (nereye bakacağınızı gösterir) =="
 for a in "${ORD[@]}"; do printf "  %-50s tamam:%s  sorun:%s\n" "$a" "${TOK["$a"]:-0}" "${TSOR["$a"]:-0}"; done
 echo
 echo "ÖZET: $OKS tamam, $SORUN sorun. (BİLGİ satırları hata değildir)"
 }
-calistir 2>&1 | tee "$OUT"
+calistir > "$OUT.tam" 2>&1
+if [ "$1" = "--ayrintili" ] || [ "$2" = "--ayrintili" ]; then
+  tee "$OUT" < "$OUT.tam"
+else
+  {
+    echo "Kök Sağlık Kontrolü – $(date '+%F %T')"
+    echo
+    if [ "$SORUN" -eq 0 ]; then
+      echo "✔  Her şey yolunda. Sorun bulunamadı."
+    else
+      echo "✖  $SORUN sorun bulundu:"
+      echo
+      grep '\[SORUN\]' "$OUT.tam" | sed 's/^ *\[SORUN\] */  • /; s/  -> ilgili:.*$//'
+      echo
+      echo "Çözemezseniz masaüstündeki «Hata Raporu Oluştur» ile rapor alıp geliştiriciye gönderin."
+    fi
+  } | tee "$OUT"
+fi
 if [ "$1" = "--gui" ] && command -v zenity >/dev/null; then
   zenity --text-info --title="Kök Sağlık Kontrolü" --width=700 --height=560 --filename="$OUT" 2>/dev/null
 fi

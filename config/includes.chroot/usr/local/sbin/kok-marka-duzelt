@@ -1,0 +1,8 @@
+#!/bin/sh
+# Kök OS: sistem adı (os-release) bir güncellemeyle silinmişse her açılışta geri yazar.
+SURUM=$(grep '^KOK_SURUM=' /etc/kok/surum 2>/dev/null | cut -d= -f2)
+F=$(readlink -f /etc/os-release)
+[ -n "$F" ] && [ -f "$F" ] || exit 0
+grep -q 'Kök OS' "$F" && exit 0
+sed -i "s/^PRETTY_NAME=.*/PRETTY_NAME=\"Kök OS ${SURUM:-0.9}\"/; s/^NAME=.*/NAME=\"Kök OS\"/" "$F"
+exit 0

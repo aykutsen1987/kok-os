@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Name=Kök VM Pano
+Exec=/usr/local/bin/kok-vm-pano
+NoDisplay=true
+X-GNOME-Autostart-Delay=2

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Kök OS'u Kur
+Name[tr]=Kök OS'u Kur
+Name[en]=Install Kök OS
+Comment=Kök OS'u bilgisayarınıza kurun
+Exec=/usr/local/bin/kok-kur
+Icon=/usr/share/kok/kok-logo.png
+Terminal=false
+Comment[en]=Install Kök OS on your computer

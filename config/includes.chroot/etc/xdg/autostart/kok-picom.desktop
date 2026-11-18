@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Name=Kök Köşeler
+Exec=/usr/local/bin/kok-picom-baslat
+NoDisplay=true
+X-GNOME-Autostart-Delay=2

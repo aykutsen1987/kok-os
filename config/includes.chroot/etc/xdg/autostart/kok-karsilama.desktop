@@ -1,0 +1,5 @@
+[Desktop Entry]
+Type=Application
+Name=Kök Karşılama
+Exec=/usr/local/bin/kok-karsilama --otomatik
+X-GNOME-Autostart-Delay=4

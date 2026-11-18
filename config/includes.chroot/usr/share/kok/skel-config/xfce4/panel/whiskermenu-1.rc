@@ -1,0 +1,6 @@
+favorites=thunar.desktop,firefox-esr.desktop,xfce4-terminal.desktop,kok-uygulamalar.desktop,kok-ayarlar.desktop,mousepad.desktop
+button-icon=/usr/share/kok/kok-logo.png
+button-title=Kök
+show-button-icon=true
+show-button-title=false
+display-recent=false

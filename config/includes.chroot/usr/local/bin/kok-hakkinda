@@ -1,0 +1,104 @@
+#!/usr/bin/env python3
+# Kök OS Hakkında – sürüm, geliştirici, YouTube ve Play Store bağlantıları
+import gi, os, sys, subprocess
+gi.require_version("Gtk", "3.0")
+from gi.repository import Gtk, GLib
+sys.path.insert(0, "/usr/local/lib/kok")
+from kok_i18n import T, agac
+
+LOGDIR = os.path.expanduser("~/.local/state/kok")
+os.makedirs(LOGDIR, exist_ok=True)
+try:
+    sys.stderr = open(os.path.join(LOGDIR, "kok-hakkinda.log"), "a", buffering=1)
+except Exception:
+    pass
+YOUTUBE = "https://www.youtube.com/@aykutsen1987"
+PLAY = "https://play.google.com/store/search?q=pub%3A%20%40aykutsen1987&c=apps"
+D = "/usr/share/kok/"
+
+
+def ac(url):
+    try:
+        subprocess.Popen(["xdg-open", url])
+    except Exception as e:
+        print("acilamadi", url, e, file=sys.stderr)
+
+
+def surum():
+    try:
+        for s in open("/etc/kok/surum"):
+            if s.startswith("KOK_SURUM="):
+                return s.split("=", 1)[1].strip()
+    except Exception:
+        pass
+    return "?"
+
+
+def simgeli_dugme(metin, dosya, url):
+    d = Gtk.Button(label=metin)
+    try:
+        from gi.repository import GdkPixbuf
+        d.set_image(Gtk.Image.new_from_pixbuf(GdkPixbuf.Pixbuf.new_from_file_at_scale(D + dosya, 32, 32, True)))
+        d.set_always_show_image(True)
+    except Exception as e:
+        print("simge", dosya, e, file=sys.stderr)
+    d.connect("clicked", lambda _b: ac(url))
+    return d
+
+
+class Pencere(Gtk.Window):
+    def __init__(self):
+        super().__init__(title="Kök OS Hakkında")
+        self.set_default_size(420, 560)
+        self.set_position(Gtk.WindowPosition.CENTER)
+        self.set_resizable(False)
+        k = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        k.set_border_width(20)
+        self.add(k)
+        try:
+            k.pack_start(Gtk.Image.new_from_file(D + "kok-logo.png"), False, False, 0)
+        except Exception:
+            pass
+        ad = Gtk.Label()
+        ad.set_markup("<big><big><b>Kök OS</b></big></big>")
+        k.pack_start(ad, False, False, 0)
+        bilgi = Gtk.Label(label="Sürüm %s\nDebian 13 tabanlı\nLinux %s" % (surum(), os.uname().release))
+        bilgi.set_justify(Gtk.Justification.CENTER)
+        k.pack_start(bilgi, False, False, 0)
+        gel = Gtk.Label()
+        gel.set_markup('Geliştirici: <a href="dev"><b>@aykutsen1987</b></a>')
+        gel.connect("activate-link", self.gelistirici)
+        k.pack_start(gel, False, False, 4)
+        k.pack_start(simgeli_dugme("YouTube", "youtube.png", YOUTUBE), False, False, 0)
+        k.pack_start(simgeli_dugme("Google Play Store", "playstore.png", PLAY), False, False, 0)
+        yeni = Gtk.Button(label="Android Uygulamalarım")
+        yeni.connect("clicked", lambda _b: subprocess.Popen(["/usr/local/bin/kok-uygulamalar"]))
+        k.pack_start(yeni, False, False, 0)
+        kapat = Gtk.Button(label="Kapat")
+        kapat.connect("clicked", lambda _b: self.destroy())
+        k.pack_end(kapat, False, False, 0)
+        agac(self)
+
+    def gelistirici(self, _lbl, _uri):
+        d = Gtk.Dialog(title="@aykutsen1987", parent=self, modal=True)
+        d.set_position(Gtk.WindowPosition.CENTER)
+        kut = d.get_content_area()
+        kut.set_border_width(16)
+        kut.set_spacing(10)
+        et = Gtk.Label(label="Bağlantılar")
+        kut.pack_start(et, False, False, 0)
+        kut.pack_start(simgeli_dugme("YouTube: youtube.com/@aykutsen1987", "youtube.png", YOUTUBE), False, False, 0)
+        kut.pack_start(simgeli_dugme("Play Store: @aykutsen1987", "playstore.png", PLAY), False, False, 0)
+        d.add_button(T("Kapat"), Gtk.ResponseType.CLOSE)
+        agac(d)
+        d.show_all()
+        d.run()
+        d.destroy()
+        return True
+
+
+if __name__ == "__main__":
+    p = Pencere()
+    p.connect("destroy", Gtk.main_quit)
+    p.show_all()
+    Gtk.main()

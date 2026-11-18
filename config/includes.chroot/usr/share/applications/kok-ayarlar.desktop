@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Kök Ayarlar
+Name[tr]=Kök Ayarlar
+Name[en]=Kök Settings
+Comment=Kök OS sistem ayarları
+Exec=/usr/local/bin/kok-ayarlar
+Icon=preferences-system
+Terminal=false
+Categories=Settings;System;
+Comment[en]=Kök OS system settings

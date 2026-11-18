@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Windows Programı Çalıştır
+Name[tr]=Windows Programı Çalıştır
+Comment=Windows (.exe / .msi) programlarını Kök OS üzerinde çalıştırır
+Exec=/usr/local/bin/kok-exe-calistir %f
+Icon=wine
+Terminal=false
+NoDisplay=true
+MimeType=application/x-ms-dos-executable;application/x-msdownload;application/x-msi;application/vnd.microsoft.portable-executable;application/x-dosexec;

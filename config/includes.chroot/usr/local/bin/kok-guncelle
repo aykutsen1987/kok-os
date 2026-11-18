@@ -1,0 +1,26 @@
+#!/bin/bash
+# Kök Güncelleme: Kök sürüm denetimi + sistem paketleri
+mkdir -p "$HOME/.local/state/kok"; exec > >(tee -a "$HOME/.local/state/kok/kok-guncelle.log") 2>&1; echo "--- $(date '+%F %T') $0"
+MEVCUT=$(grep '^KOK_SURUM=' /etc/kok/surum 2>/dev/null | cut -d= -f2)
+URL=$(grep '^SURUM_URL=' /etc/kok/guncelleme.conf 2>/dev/null | cut -d= -f2)
+DEPO=$(grep '^GITHUB_DEPO=' /etc/kok/guncelleme.conf 2>/dev/null | cut -d= -f2)
+[ -z "$URL" ] && [ -n "$DEPO" ] && URL="https://github.com/$DEPO/releases/latest/download/surum.json"
+if [ -n "$URL" ]; then
+  case "$URL" in https://*) ;; *) zenity --error --title="Kök Güncelleme" --text="Sürüm adresi https:// ile başlamalı." 2>/dev/null; URL="";; esac
+fi
+if [ -n "$URL" ]; then
+  JSON=$(curl -fsSL --max-time 15 "$URL" 2>/dev/null)
+  if [ -n "$JSON" ]; then
+    YENI=$(python3 -c 'import json,sys;print(json.load(sys.stdin).get("surum",""))' <<<"$JSON" 2>/dev/null)
+    NOT=$(python3 -c 'import json,sys;print(json.load(sys.stdin).get("not",""))' <<<"$JSON" 2>/dev/null)
+    INDIR=$(python3 -c 'import json,sys;print(json.load(sys.stdin).get("indir",""))' <<<"$JSON" 2>/dev/null)
+    echo "Mevcut: $MEVCUT  Yeni: $YENI"
+    if [ -n "$YENI" ] && [ "$YENI" != "$MEVCUT" ]; then
+      zenity --question --title="Kök Güncelleme" --width=420 --text="Yeni Kök OS sürümü var: $YENI\n(Kurulu: $MEVCUT)\n\n$NOT\n\nİndirme sayfası açılsın mı?" 2>/dev/null && [ -n "$INDIR" ] && xdg-open "$INDIR"
+    fi
+  else
+    echo "Sürüm bilgisi alınamadı."
+  fi
+fi
+zenity --question --title="Kök Güncelleme" --width=420 --text="Sistem paketleri (güvenlik ve hata düzeltmeleri) şimdi güncellensin mi?" 2>/dev/null || exit 0
+exec xfce4-terminal --title="Kök Güncelleme" -x bash -c "sudo apt-get update && sudo apt-get full-upgrade; echo; read -p 'Kapatmak için Enter tuşuna basın...'"

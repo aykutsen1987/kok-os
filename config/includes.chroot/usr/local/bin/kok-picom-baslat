@@ -1,0 +1,35 @@
+#!/bin/bash
+# Kök OS: yuvarlak pencere köşeleri için picom'u güvenilir biçimde başlatır.
+# Yarıçap: ~/.config/kok/kose-yaricap (0-24, varsayılan 14). Günlük: ~/.local/state/kok/picom.log
+LOG="$HOME/.local/state/kok/picom.log"
+CONF=/usr/share/kok/picom.conf
+mkdir -p "$(dirname "$LOG")"
+yaz() { echo "[$(date +%T)] $*" >> "$LOG"; }
+R=$(cat "$HOME/.config/kok/kose-yaricap" 2>/dev/null)
+case "$R" in ''|*[!0-9]*) R=14;; esac
+yaz "kok-picom-baslat basladi (picom: $(command -v picom || echo YOK), $(picom --version 2>&1 | head -1), yaricap=$R)"
+command -v picom >/dev/null 2>&1 || { yaz "picom kurulu degil"; exit 1; }
+pgrep -x picom >/dev/null && { yaz "picom zaten calisiyor"; exit 0; }
+for i in $(seq 1 20); do pgrep -x xfwm4 >/dev/null && break; sleep 1; done
+xfconf-query -c xfwm4 -p /general/use_compositing -n -t bool -s false >>"$LOG" 2>&1
+for i in $(seq 1 10); do
+  xprop -root _NET_WM_CM_S0 2>/dev/null | grep -q "window id" || break
+  sleep 1
+done
+yaz "ortam: DISPLAY=$DISPLAY oturum=${XDG_SESSION_TYPE:-?} xfwm4=$(pgrep -x xfwm4 | head -1) kompozitor=$(xprop -root _NET_WM_CM_S0 2>&1 | head -1)"
+for deneme in 1 2 3; do
+  case $deneme in
+    1) EK="" ;;
+    2) EK="--no-use-damage" ;;
+    3) EK="--no-use-damage --no-fading-openclose" ;;
+  esac
+  yaz "deneme $deneme: picom --config $CONF --corner-radius $R $EK"
+  nohup picom --config "$CONF" --corner-radius "$R" $EK >>"$LOG" 2>&1 &
+  sleep 3
+  if pgrep -x picom >/dev/null; then yaz "picom calisiyor (deneme $deneme)"; exit 0; fi
+  yaz "deneme $deneme basarisiz"
+  sleep 2
+done
+yaz "picom baslatilamadi; yerlesik kompozitore donuluyor"
+xfconf-query -c xfwm4 -p /general/use_compositing -n -t bool -s true >>"$LOG" 2>&1
+exit 1

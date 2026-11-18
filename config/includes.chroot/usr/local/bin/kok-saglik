@@ -1,0 +1,162 @@
+#!/bin/bash
+# Kök Sağlık Kontrolü: her adımın çalışıp çalışmadığını Türkçe özetler.
+export PATH=$PATH:/usr/sbin:/sbin
+mkdir -p /tmp/kok; OUT=/tmp/kok/saglik.txt
+OKS=0; SORUN=0
+declare -A TOK TSOR; ORD=(); CUR=""
+ok(){ echo "  [TAMAM]  $1"; OKS=$((OKS+1)); TOK["$CUR"]=$(( ${TOK["$CUR"]:-0} + 1 )); }
+sorun(){ echo "  [SORUN]  $1  -> ilgili: $2"; SORUN=$((SORUN+1)); TSOR["$CUR"]=$(( ${TSOR["$CUR"]:-0} + 1 )); }
+bilgi(){ echo "  [BİLGİ]  $1"; }
+baslik(){ CUR="$1"; ORD+=("$1"); echo; echo "== $1 =="; }
+kontrol(){ local a="$1" i="$2"; shift 2; if "$@" >/dev/null 2>&1; then ok "$a"; else sorun "$a" "$i"; fi; }
+calistir(){
+echo "Kök Sağlık Kontrolü – $(date '+%F %T')   Profil: $(cat /tmp/kok/profil 2>/dev/null || echo ?)"
+
+baslik "ADIM 2 – Çekirdek, bellek, dil"
+kontrol "ZRAM etkin" "hook 0020, zram-generator.conf" bash -c "grep -q zram /proc/swaps"
+kontrol "earlyoom çalışıyor" "paket earlyoom, hook 0020" systemctl is-active --quiet earlyoom
+kontrol "swappiness ayarı (150)" "sysctl.d/99-kok.conf" bash -c '[ "$(cat /proc/sys/vm/swappiness)" = 150 ]'
+kontrol "Türkçe dil (tr_TR)" "hook 0010" bash -c "locale | grep -q tr_TR"
+kontrol "Türkçe Q klavye" "/etc/default/keyboard" bash -c "setxkbmap -query | grep -q 'layout:.*tr'"
+if timedatectl show -p NTPSynchronized --value 2>/dev/null | grep -q yes; then ok "Saat eşitlendi (NTP)"; else bilgi "Saat henüz eşitlenmedi (internet yoksa normal)"; fi
+
+baslik "ADIM 3 – Masaüstü ve tema"
+kontrol "Xfce paneli çalışıyor" "xfce4-panel.xml (adım 6)" pgrep -x xfce4-panel
+kontrol "Pencere yöneticisi çalışıyor" "xfwm4" pgrep -x xfwm4
+kontrol "Rıhtım (Plank) çalışıyor" "autostart/plank.desktop, dconf" pgrep -x plank
+if [ -d /usr/share/themes/WhiteSur-Dark ]; then ok "WhiteSur GTK teması kurulu"; else bilgi "WhiteSur GTK yok, Arc teması kullanılıyor (hook 0030 çıktısına bak)"; fi
+bilgi "Simge teması: $(xfconf-query -c xsettings -p /Net/IconThemeName 2>/dev/null)"
+
+baslik "ADIM 4 – Windows (Wine) ve Android (Waydroid)"
+kontrol "Wine kurulu" "hook 0040" command -v wine
+bilgi "Wine sürümü: $(wine --version 2>/dev/null || echo yok)"
+kontrol "32-bit (i386) desteği" "hook 0040" bash -c "dpkg --print-foreign-architectures | grep -q i386"
+kontrol "Waydroid kurulu" "hook 0050 (resmi depo)" command -v waydroid
+kontrol "cage (Android penceresi) kurulu" "hook 0050" command -v cage
+if grep -qw binder /proc/filesystems 2>/dev/null; then ok "Çekirdekte binder desteği var"; else bilgi "binder yok: sanal makinede normal, gerçek donanımda kontrol edin"; fi
+if [ -f /var/lib/waydroid/waydroid.cfg ]; then ok "Android ortamı kurulmuş"; else bilgi "Android ortamı henüz kurulmadı (isteğe bağlı)"; fi
+
+baslik "ADIM 5 – Kurulum sihirbazı ve marka"
+kontrol "Calamares kurulu" "paket calamares" command -v calamares
+kontrol "Kök marka dosyası" "branding/kok" test -f /etc/calamares/branding/kok/branding.desc
+kontrol "Calamares markası 'kok' (kurulu sistemde Calamares kaldırılır)" "hook 0060" bash -c '[ ! -f /etc/calamares/settings.conf ] || grep -q "^branding: *kok" /etc/calamares/settings.conf'
+kontrol "Sistem adı Kök OS" "hook 0070" grep -q 'Kök OS' /etc/os-release
+kontrol "Hata raporu aracı" "kok-hata-raporu" test -x /usr/local/bin/kok-hata-raporu
+
+baslik "ADIM 6 – Görünüm ve Kök Ayarlar"
+kontrol "Duvar kâğıdı dosyası" "usr/share/backgrounds/kok" test -f /usr/share/backgrounds/kok/kok-duvar.png
+kontrol "Panel yapılandırması" "xfce4-panel.xml" test -f /etc/xdg/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml
+kontrol "Rıhtım büyütme kapalı (dconf)" "dconf/00-kok, hook 0080" bash -c "dconf read /net/launchpad/plank/docks/dock1/zoom-enabled | grep -q false"
+kontrol "Kök Ayarlar kod olarak geçerli" "kok-ayarlar" python3 -c "import ast;ast.parse(open('/usr/local/bin/kok-ayarlar').read())"
+kontrol "Rıhtım başlatıcıları kullanıcıya kopyalandı" "hook 0085-skel (skel-config)" test -f "$HOME/.config/plank/dock1/launchers/kok-ayarlar.dockitem"
+kontrol "Kök menü ayarı mevcut" "hook 0085-skel (skel-config)" bash -c 'ls "$HOME"/.config/xfce4/panel/whiskermenu-*.rc >/dev/null 2>&1 || [ -f /etc/skel/.config/xfce4/panel/whiskermenu-1.rc ]'
+GIZLI=1; for f in install-debian calamares-install-debian; do [ -f /usr/share/applications/$f.desktop ] && ! grep -qs "^Hidden=true" /usr/share/applications/$f.desktop && GIZLI=0; done
+if [ $GIZLI = 1 ]; then ok "'Install Debian' kısayolu gizli"; else sorun "'Install Debian' kısayolu görünür" "hook 0080"; fi
+
+baslik "ADIM 7 – Android kataloğu ve açılış markası"
+kontrol "Gömülü katalog (JSON) geçerli" "android-katalog.json" python3 -m json.tool /usr/share/kok/android-katalog.json
+kontrol "Katalog ayar dosyası" "etc/kok/android-katalog.conf" test -f /etc/kok/android-katalog.conf
+kontrol "Katalog aracı geçerli" "kok-uygulamalar" python3 -c "import ast;ast.parse(open('/usr/local/bin/kok-uygulamalar').read())"
+bilgi "Önyüklü APK sayısı: $(ls /usr/share/kok/apk/*.apk 2>/dev/null | wc -l)"
+bilgi "Katalog adresi: $(grep '^KATALOG_URL=' /etc/kok/android-katalog.conf 2>/dev/null | cut -d= -f2)"
+
+baslik "ADIM 8 – Karşılama, sağlık, hazır uygulamalar"
+kontrol "Karşılama aracı geçerli" "kok-karsilama" python3 -c "import ast;ast.parse(open('/usr/local/bin/kok-karsilama').read())"
+for p in vlc evince galculator xfce4-taskmanager soffice; do kontrol "Uygulama kurulu: $p" "kok-uygulamalar.list.chroot" command -v $p; done
+
+baslik "ADIM 9 – Eski donanım performansı"
+kontrol "Disk zamanlayıcı kuralı" "etc/udev/rules.d/60-kok-disk.rules" test -f /etc/udev/rules.d/60-kok-disk.rules
+kontrol "Hızlı kapanış ayarı (10 sn)" "system.conf.d/kok.conf" bash -c "systemctl show -p DefaultTimeoutStopUSec | grep -q '10s'"
+kontrol "Performans aracı" "kok-performans" test -x /usr/local/bin/kok-performans
+bilgi "Açılış: $(systemd-analyze 2>/dev/null | head -1 | cut -c1-90)"
+bilgi "Boşta bellek kullanımı: $(free -m | awk 'NR==2{print $3" MB / "$2" MB"}')"
+
+baslik "ADIM 10 – Donanım, dokunmatik, güç"
+kontrol "Ekran döndürme aracı" "kok-donder" test -x /usr/local/bin/kok-donder
+kontrol "Dokunmatik yüzey ayarı (libinput)" "etc/X11/xorg.conf.d/40-kok-libinput.conf" test -f /etc/X11/xorg.conf.d/40-kok-libinput.conf
+kontrol "Ivmeölçer servisi (iio-sensor-proxy)" "kok-donanim.list" command -v monitor-sensor
+kontrol "Ekran klavyesi (onboard)" "kok-donanim.list" command -v onboard
+kontrol "Bluetooth yönetimi (blueman)" "kok-donanim.list" command -v blueman-manager
+kontrol "Pil yönetimi (TLP)" "kok-donanim.list, tlp.d/10-kok.conf" command -v tlp
+kontrol "Güç yöneticisi" "xfce4-power-manager" command -v xfce4-power-manager-settings
+bilgi "Dokunmatik ekran: $(xinput list 2>/dev/null | grep -ciE 'touchscreen|touch screen') adet (0 ise bu cihazda yok)"
+bilgi "İvmeölçer: $(ls /sys/bus/iio/devices/iio:device*/in_accel_x_raw 2>/dev/null | wc -l) adet"
+bilgi "Pil: $(ls /sys/class/power_supply 2>/dev/null | grep -ci '^BAT') adet"
+bilgi "Wi-Fi adaptörü: $(nmcli -t -f TYPE device 2>/dev/null | grep -c wifi) adet"
+bilgi "Bluetooth: $(rfkill list bluetooth 2>/dev/null | grep -c Bluetooth) adaptör"
+
+baslik "ADIM 11 – Güncelleme"
+kontrol "Kök Güncelleme aracı" "kok-guncelle" test -x /usr/local/bin/kok-guncelle
+kontrol "Otomatik güvenlik güncellemesi ayarı" "apt.conf.d/20auto-upgrades" test -f /etc/apt/apt.conf.d/20auto-upgrades
+kontrol "unattended-upgrades kurulu" "kok-donanim.list" dpkg -s unattended-upgrades
+bilgi "Kök sürüm adresi: $(grep '^SURUM_URL=' /etc/kok/guncelleme.conf 2>/dev/null | cut -d= -f2)"
+
+baslik "ADIM 12 – Kılavuz ve sürüm"
+kontrol "Kullanım kılavuzu" "usr/share/kok/kilavuz.html" test -f /usr/share/kok/kilavuz.html
+kontrol "Sürüm dosyası" "hook 0070" grep -q KOK_SURUM /etc/kok/surum
+bilgi "Kök OS sürümü: $(grep '^KOK_SURUM=' /etc/kok/surum 2>/dev/null | cut -d= -f2)  Adımlar: $(grep '^ADIMLAR=' /etc/kok/surum 2>/dev/null | cut -d= -f2)"
+
+baslik "ADIM 13 – Kimlik, dil, katalog, köşeler"
+if grep -q "boot=live" /proc/cmdline 2>/dev/null; then
+  kontrol "Canlı oturumda parolasız yönetici yetkisi (sudo)" "live-config sudoers / kok-yetkili" sudo -n true
+  kontrol "Parolasız yetki kuralı (polkit)" "etc/polkit-1/rules.d/49-kok-canli.rules" sudo -n test -f /etc/polkit-1/rules.d/49-kok-canli.rules
+  kontrol "kok kullanıcısı hazır (hook 0165)" "hook 0165-kullanici, kok-kullanici-hazirla" id kok
+  kontrol "Otomatik giriş yapılandırması" "etc/lightdm/lightdm.conf.d/50-kok.conf" grep -q 'autologin-user=kok' /etc/lightdm/lightdm.conf.d/50-kok.conf
+fi
+kontrol "Hakkında (i) aracı geçerli" "kok-hakkinda" python3 -c "import ast;ast.parse(open('/usr/local/bin/kok-hakkinda').read())"
+kontrol "Panelde 'i' düğmesi dosyası" "skel-config/xfce4/panel/launcher-10" test -f "$HOME/.config/xfce4/panel/launcher-10/kok-hakkinda.desktop"
+kontrol "Masaüstünde Hakkında kısayolu" "etc/skel/Desktop" test -f "$HOME/Desktop/kok-hakkinda.desktop"
+kontrol "Çeviri modülü ve sözlüğü" "kok_i18n.py, ceviri-en.json" python3 -c "import sys,json;sys.path.insert(0,'/usr/local/lib/kok');import kok_i18n;json.load(open('/usr/share/kok/ceviri-en.json'))"
+kontrol "İngilizce mesaj çevirici (zenity)" "usr/local/bin/zenity" test -x /usr/local/bin/zenity
+kontrol "İngilizce yerel ayar (en_US) kurulu" "hook 0010" bash -c "locale -a | grep -qi 'en_US'"
+kontrol "Dil değiştirme aracı" "kok-dil, kok-dil-uygula" test -x /usr/local/bin/kok-dil
+kontrol "Android kataloğu geçerli (alanlar)" "android-katalog.json" python3 -c "import json;d=json.load(open('/usr/share/kok/android-katalog.json'));assert d['uygulamalar'] and all('ad' in u for u in d['uygulamalar'])"
+kontrol "picom (yuvarlak köşeler) kurulu" "kok-cila.list.chroot" command -v picom
+if [ "$(cat /tmp/kok/profil 2>/dev/null)" = "standart" ] && [ ! -f "$HOME/.config/kok/yuvarlak-kapali" ]; then
+  kontrol "picom çalışıyor (standart profil)" "kok-picom-baslat, ~/.local/state/kok/picom.log" bash -c 'for i in 1 2 3 4 5 6; do pgrep -x picom >/dev/null && exit 0; sleep 5; done; exit 1'
+else bilgi "picom beklenmiyor (hafif profil veya köşeler kapalı)"; fi
+bilgi "Aktif dil: $(grep '^LANG=' /etc/default/locale 2>/dev/null)  Oturum: $LANG"
+bilgi "GitHub depo ayarı: $(grep '^GITHUB_DEPO=' /etc/kok/geri-bildirim.conf 2>/dev/null | cut -d= -f2)"
+
+if [ "$(systemd-detect-virt 2>/dev/null)" = "oracle" ]; then
+baslik "ADIM 14-15 – Kurulum, çift açılış, uygulama uyumluluğu"
+kontrol "Kurulum modülü: onay pencereleri (kokuyari)" "usr/local/lib/calamares/modules/kokuyari" test -f /usr/local/lib/calamares/modules/kokuyari/main.py
+kontrol "Kurulum modülü: son ayarlar (kokbitir)" "usr/local/lib/calamares/modules/kokbitir" test -f /usr/local/lib/calamares/modules/kokbitir/main.py
+kontrol "Kurulum sırasına eklendi (settings.conf)" "hook 0062-kurulum" grep -q kokuyari /etc/calamares/settings.conf
+kontrol "Diğer işletim sistemlerini bulma (os-prober)" "kok-kurulum.list.chroot" command -v os-prober
+kontrol "NTFS (Windows disk) desteği" "kok-kurulum.list.chroot" command -v ntfs-3g
+kontrol "UEFI + Secure Boot dosyaları (shim-signed)" "kok-kurulum.list.chroot" dpkg -s shim-signed
+kontrol "BIOS önyükleyici dosyaları (grub-pc-bin)" "kok-kurulum.list.chroot" dpkg -s grub-pc-bin
+kontrol "Flatpak (Linux uygulamaları)" "kok-uyumluluk.list.chroot" command -v flatpak
+kontrol "AppImage desteği (libfuse2)" "kok-uyumluluk.list.chroot" bash -c 'ls /usr/lib/x86_64-linux-gnu/libfuse.so.2* >/dev/null 2>&1'
+kontrol "Winetricks (Windows uygulamaları)" "kok-uyumluluk.list.chroot" command -v winetricks
+bilgi "Gömülü Android simgesi: $(ls /usr/share/kok/ikonlar 2>/dev/null | wc -l) / 64 (eksikler genel simgeyle gösterilir)"
+bilgi "macOS uygulamaları doğrudan çalışmaz; Flatpak/web/Wine eşdeğerleri önerilir (kılavuza bakın)"
+
+baslik "VirtualBox entegrasyonu (pano, ekran)"
+kontrol "VirtualBox konuk araçları (VBoxClient) kurulu" "hook 0125-vbox (resmi Guest Additions)" command -v VBoxClient
+kontrol "vboxguest çekirdek modülü" "çekirdek" bash -c "lsmod | grep -q vboxguest"
+kontrol "VBoxClient (pano) çalışıyor" "autostart/kok-vm-pano.desktop" pgrep -f VBoxClient
+bilgi "Pano için VirtualBox menüsü: Aygıtlar > Paylaşılan Pano > Çift Yönlü"
+fi
+
+baslik "Köşe yuvarlaklığı (picom) – ayrıntı"
+bilgi "picom süreci: $(pgrep -x picom | wc -l) adet; yarıçap dosyası: $(cat "$HOME/.config/kok/kose-yaricap" 2>/dev/null || echo 'yok (14)')"
+if [ -f "$HOME/.local/state/kok/picom.log" ]; then
+  tail -n 12 "$HOME/.local/state/kok/picom.log" | while IFS= read -r l; do bilgi "$l"; done
+else
+  bilgi "picom günlüğü yok (kok-picom-baslat hiç çalışmamış)"
+fi
+
+baslik "Ağ"
+if ping -c1 -W2 1.1.1.1 >/dev/null 2>&1; then ok "İnternet bağlantısı var"; else sorun "İnternet bağlantısı yok" "NetworkManager / VM ağ ayarı"; fi
+
+echo; echo "== ADIM TABLOSU (nereye bakacağınızı gösterir) =="
+for a in "${ORD[@]}"; do printf "  %-50s tamam:%s  sorun:%s\n" "$a" "${TOK["$a"]:-0}" "${TSOR["$a"]:-0}"; done
+echo
+echo "ÖZET: $OKS tamam, $SORUN sorun. (BİLGİ satırları hata değildir)"
+}
+calistir 2>&1 | tee "$OUT"
+if [ "$1" = "--gui" ] && command -v zenity >/dev/null; then
+  zenity --text-info --title="Kök Sağlık Kontrolü" --width=700 --height=560 --filename="$OUT" 2>/dev/null
+fi

@@ -1,0 +1,7 @@
+#!/bin/bash
+# Kök OS: İngilizce oturumda iletileri otomatik çevirir, ardından gerçek zenity'i çalıştırır.
+REAL=/usr/bin/zenity
+case "${LC_ALL:-${LC_MESSAGES:-${LANG:-tr}}}" in en*) ;; *) exec $REAL "$@";; esac
+mapfile -d '' ARGS < <(python3 /usr/local/lib/kok/kok_i18n.py --argv "$@" 2>/dev/null)
+[ ${#ARGS[@]} -eq $# ] || exec $REAL "$@"
+exec $REAL "${ARGS[@]}"

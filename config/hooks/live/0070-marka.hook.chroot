@@ -11,6 +11,8 @@ if [ -n "$GERCEK" ] && [ -f "$GERCEK" ]; then
   [ -L /etc/os-release ] || ln -sf "../usr/lib/os-release" /etc/os-release
 fi
 echo "Kök OS 0.9 \\n \\l" > /etc/issue
+chmod +x /usr/local/sbin/kok-marka-duzelt 2>/dev/null
+systemctl enable kok-marka.service >/dev/null 2>&1 || ln -sf /etc/systemd/system/kok-marka.service /etc/systemd/system/multi-user.target.wants/kok-marka.service
 mkdir -p /etc/kok
 cat > /etc/kok/surum <<EOT
 KOK_SURUM=0.9

@@ -9,4 +9,11 @@ for s in ModemManager cups-browsed avahi-daemon; do
   systemctl disable "$s" 2>/dev/null || true
   systemctl mask "$s" 2>/dev/null || true
 done
+# picom paketi kendi otomatik başlatmasını getirir (varsayılan ayarlarla, eski ekran kartlarında çöker ve
+# bizim başlatıcımızı engeller). Kapatıyoruz; picom'u yalnızca kok-picom-baslat başlatır.
+printf '[Desktop Entry]\nType=Application\nName=picom\nHidden=true\n' > /etc/xdg/autostart/picom.desktop
+echo "[KOK:$KOK_ADIM:$KOK_MOD] picom paket otomatik baslatmasi kapatildi"
+# Açılışı yavaşlatan beklemeler: ağ hazır olana kadar bekleme ve gereksiz lxc servisleri (Waydroid bunlara ihtiyaç duymaz)
+systemctl mask NetworkManager-wait-online.service 2>/dev/null || true
+for s in lxc.service lxc-net.service lxc-monitord.service; do systemctl disable "$s" 2>/dev/null || true; done
 exit 0

@@ -1,7 +1,0 @@
-[Default Applications]
-application/x-ms-dos-executable=kok-exe.desktop
-application/x-msdownload=kok-exe.desktop
-application/x-msi=kok-exe.desktop
-application/vnd.microsoft.portable-executable=kok-exe.desktop
-application/x-dosexec=kok-exe.desktop
-application/vnd.android.package-archive=kok-apk.desktop

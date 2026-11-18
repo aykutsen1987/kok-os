@@ -1,5 +1,0 @@
-#!/bin/bash
-# Kurulum programını açar; arkada kalan karşılama penceresini önce kapatır.
-pkill -f "kok-karsilama" 2>/dev/null
-sleep 0.3
-exec sudo -E calamares "$@"

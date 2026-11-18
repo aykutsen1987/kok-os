@@ -1,8 +1,0 @@
-#!/bin/sh
-KOK_ADIM="A12"; KOK_MOD="surum"
-echo "[KOK:$KOK_ADIM:$KOK_MOD] BASLADI"
-trap 'k=$?; if [ $k -ne 0 ]; then echo "[KOK-HATA:$KOK_ADIM:$KOK_MOD] kod=$k"; else echo "[KOK:$KOK_ADIM:$KOK_MOD] TAMAM"; fi' EXIT
-[ -f /usr/share/kok/kilavuz.html ] && echo "[KOK:A12:surum] kilavuz var" || echo "[KOK-UYARI:A12:surum] kilavuz yok"
-python3 -c "import ast,sys;[ast.parse(open(\"/usr/local/bin/\"+f).read()) for f in (\"kok-ayarlar\",\"kok-karsilama\",\"kok-uygulamalar\")]" && echo "[KOK:A12:surum] python araclari gecerli" || echo "[KOK-UYARI:A12:surum] python araci hatali"
-grep KOK_SURUM /etc/kok/surum 2>/dev/null || echo "[KOK-UYARI:A12:surum] surum dosyasi yok (hook 0070 sonrasi olusmali)"
-exit 0

@@ -1,5 +1,0 @@
----
-type:       "job"
-name:       "kokuyari"
-interface:  "python"
-script:     "main.py"

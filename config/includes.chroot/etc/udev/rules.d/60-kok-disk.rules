@@ -1,3 +1,0 @@
-# Kök OS: disk türüne göre G/Ç zamanlayıcısı (HDD: mq-deadline, SSD/eMMC: none)
-ACTION=="add|change", SUBSYSTEM=="block", KERNEL=="sd[a-z]|vd[a-z]", ATTR{queue/rotational}=="1", ATTR{queue/scheduler}="mq-deadline"
-ACTION=="add|change", SUBSYSTEM=="block", KERNEL=="sd[a-z]|vd[a-z]|mmcblk[0-9]*|nvme[0-9]*n[0-9]*", ATTR{queue/rotational}=="0", ATTR{queue/scheduler}="none"

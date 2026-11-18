@@ -1,9 +1,0 @@
-#!/bin/sh
-KOK_ADIM="A9"; KOK_MOD="performans"
-echo "[KOK:$KOK_ADIM:$KOK_MOD] BASLADI"
-trap 'k=$?; if [ $k -ne 0 ]; then echo "[KOK-HATA:$KOK_ADIM:$KOK_MOD] kod=$k"; else echo "[KOK:$KOK_ADIM:$KOK_MOD] TAMAM"; fi' EXIT
-for t in man-db.timer e2scrub_all.timer; do systemctl disable $t 2>/dev/null && echo "[KOK:A9:performans] kapatildi: $t" || true; done
-[ -f /etc/udev/rules.d/60-kok-disk.rules ] && echo "[KOK:A9:performans] disk kurali var" || echo "[KOK-UYARI:A9:performans] disk kurali yok"
-[ -f /etc/systemd/system.conf.d/kok.conf ] && echo "[KOK:A9:performans] hizli kapanis ayari var" || echo "[KOK-UYARI:A9:performans] hizli kapanis ayari yok"
-dpkg -s xclip >/dev/null 2>&1 && echo "[KOK:A9:performans] xclip kurulu" || echo "[KOK-UYARI:A9:performans] xclip yok"
-exit 0

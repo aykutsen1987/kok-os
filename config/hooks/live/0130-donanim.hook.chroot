@@ -1,9 +1,0 @@
-#!/bin/sh
-KOK_ADIM="A10"; KOK_MOD="donanim"
-echo "[KOK:$KOK_ADIM:$KOK_MOD] BASLADI"
-trap 'k=$?; if [ $k -ne 0 ]; then echo "[KOK-HATA:$KOK_ADIM:$KOK_MOD] kod=$k"; else echo "[KOK:$KOK_ADIM:$KOK_MOD] TAMAM"; fi' EXIT
-for c in monitor-sensor onboard blueman-manager tlp xfce4-power-manager-settings; do command -v $c >/dev/null 2>&1 && echo "[KOK:A10:donanim] var: $c" || echo "[KOK-UYARI:A10:donanim] yok: $c"; done
-for f in /etc/X11/xorg.conf.d/40-kok-libinput.conf /etc/tlp.d/10-kok.conf /usr/local/bin/kok-donder; do [ -e $f ] && echo "[KOK:A10:donanim] dosya var: $f" || echo "[KOK-UYARI:A10:donanim] dosya yok: $f"; done
-systemctl enable tlp.service 2>/dev/null || true
-systemctl enable bluetooth.service 2>/dev/null || true
-exit 0

@@ -1,8 +1,0 @@
-#!/bin/sh
-KOK_ADIM="A11"; KOK_MOD="guncelleme"
-echo "[KOK:$KOK_ADIM:$KOK_MOD] BASLADI"
-trap 'k=$?; if [ $k -ne 0 ]; then echo "[KOK-HATA:$KOK_ADIM:$KOK_MOD] kod=$k"; else echo "[KOK:$KOK_ADIM:$KOK_MOD] TAMAM"; fi' EXIT
-dpkg -s unattended-upgrades >/dev/null 2>&1 && echo "[KOK:A11:guncelleme] unattended-upgrades kurulu" || echo "[KOK-UYARI:A11:guncelleme] unattended-upgrades yok"
-[ -f /etc/apt/apt.conf.d/20auto-upgrades ] && echo "[KOK:A11:guncelleme] otomatik guncelleme ayari var" || echo "[KOK-UYARI:A11:guncelleme] ayar yok"
-[ -x /usr/local/bin/kok-guncelle ] && echo "[KOK:A11:guncelleme] arac hazir" || echo "[KOK-UYARI:A11:guncelleme] arac yok"
-exit 0

@@ -1,0 +1,185 @@
+name: Kök OS ISO derle
+
+on:
+  workflow_dispatch:
+    inputs:
+      yayinla:
+        description: "Derleme sonunda GitHub Releases'te yayınla (true/false)"
+        required: false
+        default: "false"
+  push:
+    branches: [main, master]
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  derle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    container:
+      image: debian:trixie
+      options: --privileged
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Araçları kur
+        run: |
+          # contrib/non-free/firmware depolarını aç (paket denetimi için)
+          sed -i 's/^Components: main$/Components: main contrib non-free non-free-firmware/' /etc/apt/sources.list.d/debian.sources 2>/dev/null || true
+          apt-get update
+          apt-get install -y live-build git zip xz-utils ca-certificates
+          lb --version || true
+          df -h /
+
+      - uses: actions/checkout@v4
+
+      - name: Dosyaları denetle
+        run: |
+          mkdir -p /tmp/cikti
+          echo "Çalışma klasörü: $PWD"; ls -la
+          CFG=$(find . -path '*/auto/config' | head -1)
+          if [ -z "$CFG" ]; then
+            echo "HATA: auto/config bulunamadı. Dosyalar yanlış yüklenmiş olabilir."
+            find . -maxdepth 3 -not -path './.git/*' | head -60
+            exit 1
+          fi
+          echo "KOK_DIR=$(cd "$(dirname "$(dirname "$CFG")")" && pwd)" >> "$GITHUB_ENV"
+
+      - name: Dosyaları hazırla ve paketleri denetle
+        run: |
+          cd "$KOK_DIR"
+          # Sürüm numarası ve depo adı (güncelleme bildirimi bu depodaki son yayından okunur)
+          KOK_SURUM=$(grep -m1 '^KOK_SURUM=' config/hooks/live/0070-marka.hook.chroot | cut -d= -f2)
+          echo "KOK_SURUM=${KOK_SURUM:-0.9}" >> "$GITHUB_ENV"
+          sed -i "s|^GITHUB_DEPO=.*|GITHUB_DEPO=${GITHUB_REPOSITORY}|" config/includes.chroot/etc/kok/guncelleme.conf
+          echo "Sürüm: ${KOK_SURUM}  Depo: ${GITHUB_REPOSITORY}"
+          # Windows satır sonlarını (CRLF) temizle ve çalıştırma izinlerini geri ver
+          find auto config -type f \( -path 'auto/*' -o -path '*/hooks/*' -o -name '*.list.chroot' -o -path '*/usr/local/bin/*' \) -exec sed -i 's/\r$//' {} +
+          chmod +x auto/* kok-build-rapor.sh config/hooks/live/* config/includes.chroot/usr/local/bin/* 2>/dev/null || true
+          # Bilinen eski paket adlarını düzelt
+          sed -i 's/^policykit-1$/polkitd/' config/package-lists/*.list.chroot
+          # Trixie'de adayı olmayan paketleri bul ve çıkar (güvenli sürüm)
+          apt-get update -qq
+          : > /tmp/cikti/eksik-paketler.txt
+          TOPLAM=0; EKSIK=0
+          for f in config/package-lists/*.list.chroot; do
+            while read -r p || [ -n "$p" ]; do
+              case "$p" in ''|'#'*) continue;; esac
+              TOPLAM=$((TOPLAM+1))
+              ADAY=$(apt-cache policy "$p" 2>/dev/null | awk '/Candidate:/{print $2}')
+              if [ -z "$ADAY" ] || [ "$ADAY" = "(none)" ]; then
+                EKSIK=$((EKSIK+1))
+                echo "[KOK-UYARI:PAKET] trixie'de aday yok, atlandi: $p ($f)" | tee -a /tmp/cikti/eksik-paketler.txt
+                sed -i "/^${p}\$/d" "$f"
+              fi
+            done < "$f"
+          done
+          echo "Paket denetimi: toplam=$TOPLAM eksik=$EKSIK"
+          # Emniyet: çok fazla paket eksik görünüyorsa denetimin kendisi bozuktur
+          if [ "$EKSIK" -gt 8 ]; then
+            echo "HATA: $EKSIK paket eksik görünüyor, denetim güvenilmez. Derleme durduruldu."
+            exit 1
+          fi
+          # Kullanılan listelerin son hâli (tanı için)
+          for f in config/package-lists/*.list.chroot; do echo "### $f"; cat "$f"; done > /tmp/cikti/paket-listeleri.txt
+
+      - name: ISO derle
+        run: |
+          cd "$KOK_DIR"
+          ls -la auto
+          lb config 2>&1 | tee /tmp/cikti/lb-config.log
+          lb build 2>&1 | tee /tmp/cikti/lb-build.log
+
+      - name: Çıktıları topla
+        if: always()
+        run: |
+          mkdir -p /tmp/cikti
+          cd "${KOK_DIR:-.}" || true
+          cp *.iso kok-build-rapor.txt build.log /tmp/cikti/ 2>/dev/null || true
+          { date; df -h /; ls -la; ls -la auto config 2>&1; } > /tmp/cikti/tani.txt 2>&1
+          cd /tmp/cikti
+          for f in *.iso; do [ -f "$f" ] && mv "$f" "kok-os-${KOK_SURUM}-amd64.iso"; done
+          ls *.iso >/dev/null 2>&1 && sha256sum *.iso > SHA256SUMS.txt || true
+          ls -la /tmp/cikti
+
+      - name: Yayın dosyalarını hazırla (ISO parçaları, sağlama toplamı, duyuru)
+        id: yayin
+        if: always()
+        run: |
+          ISO=$(ls /tmp/cikti/kok-os-*-amd64.iso 2>/dev/null | head -1 || true)
+          if [ -z "$ISO" ]; then echo "ISO yok, yayın hazırlanmadı."; echo "hazir=false" >> "$GITHUB_OUTPUT"; exit 0; fi
+          mkdir -p /tmp/yayin
+          AD=$(basename "$ISO")
+          BOYUT=$(stat -c %s "$ISO")
+          # GitHub Releases dosya başına 2 GiB sınırı var: büyükse 1900 MiB'lık parçalara böl
+          if [ "$BOYUT" -gt 2000000000 ]; then
+            split -b 1900M -d -a 3 --numeric-suffixes=1 "$ISO" "/tmp/yayin/${AD}."
+            PARCALI=1
+          else
+            cp "$ISO" /tmp/yayin/
+            PARCALI=0
+          fi
+          (cd /tmp/cikti && sha256sum "$AD") > /tmp/yayin/SHA256SUMS.txt
+          (cd /tmp/yayin && for f in ${AD}.0*; do [ -f "$f" ] && sha256sum "$f"; done) >> /tmp/yayin/SHA256SUMS.txt 2>/dev/null || true
+          ETIKET="v${KOK_SURUM}"; [ "${GITHUB_REF_TYPE}" = "tag" ] && ETIKET="${GITHUB_REF_NAME}"
+          printf '{"surum":"%s","not":"Kök OS %s yayınlandı.","indir":"https://github.com/%s/releases/tag/%s"}\n' "$KOK_SURUM" "$KOK_SURUM" "$GITHUB_REPOSITORY" "$ETIKET" > /tmp/yayin/surum.json
+          [ -f "$KOK_DIR/docs/Kok-OS-Kurulum-Rehberi.pdf" ] && cp "$KOK_DIR/docs/Kok-OS-Kurulum-Rehberi.pdf" /tmp/yayin/ || true
+          {
+            echo "## Kök OS ${KOK_SURUM}"
+            echo
+            echo "Kurulum rehberi: **Kok-OS-Kurulum-Rehberi.pdf** (bu sayfadaki dosyalar arasında)."
+            echo
+            if [ "$PARCALI" = 1 ]; then
+              echo "### ISO dosyasını birleştirme"
+              echo "ISO, GitHub sınırı nedeniyle parçalara bölünmüştür. Tüm .001, .002 … parçalarını **aynı klasöre** indirin."
+              echo
+              echo "**Windows (Komut İstemi):**"
+              echo '```'
+              echo "copy /b ${AD}.001+${AD}.002 ${AD}"
+              echo '```'
+              echo "**Linux / macOS:**"
+              echo '```'
+              echo "cat ${AD}.0* > ${AD}"
+              echo '```'
+              echo "Ardından SHA256SUMS.txt içindeki ilk satırla dosyanın sağlama toplamını karşılaştırın."
+            else
+              echo "ISO dosyasını indirip USB belleğe yazın (Rufus, DD modu)."
+            fi
+          } > /tmp/yayin/SURUM-NOTLARI.md
+          ls -la /tmp/yayin
+          echo "hazir=true" >> "$GITHUB_OUTPUT"
+
+      - name: GitHub Releases'te yayınla
+        if: steps.yayin.outputs.hazir == 'true' && (github.ref_type == 'tag' || github.event.inputs.yayinla == 'true')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || format('v{0}', env.KOK_SURUM) }}
+          name: Kök OS ${{ env.KOK_SURUM }}
+          body_path: /tmp/yayin/SURUM-NOTLARI.md
+          files: /tmp/yayin/*
+          fail_on_unmatched_files: false
+
+      - name: Raporu özet sayfasına yaz
+        if: always()
+        run: |
+          {
+            echo "## Kök OS derleme raporu"
+            if [ -f /tmp/cikti/kok-build-rapor.txt ]; then
+              echo '```'; head -c 60000 /tmp/cikti/kok-build-rapor.txt; echo '```'
+            else
+              echo "Rapor oluşmadı. Aşağıda derleme çıktısının son satırları var."
+              echo '```'; tail -n 80 /tmp/cikti/lb-build.log 2>/dev/null; echo '```'
+            fi
+            echo "### Atlanan paketler"; echo '```'; cat /tmp/cikti/eksik-paketler.txt 2>/dev/null; echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: ISO ve raporları yükle
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kok-os-iso-ve-rapor
+          path: /tmp/cikti
+          if-no-files-found: warn

@@ -1,0 +1,15 @@
+#!/bin/sh
+KOK_ADIM="A4"; KOK_MOD="waydroid"
+echo "[KOK:$KOK_ADIM:$KOK_MOD] BASLADI"
+trap 'k=$?; if [ $k -ne 0 ]; then echo "[KOK-HATA:$KOK_ADIM:$KOK_MOD] kod=$k"; else echo "[KOK:$KOK_ADIM:$KOK_MOD] TAMAM"; fi' EXIT
+# Waydroid Debian trixie deposunda yok; resmi Waydroid deposunu ekliyoruz.
+if curl -fsSL https://repo.waydro.id/waydroid.gpg -o /usr/share/keyrings/waydroid.gpg; then
+  echo "deb [signed-by=/usr/share/keyrings/waydroid.gpg] https://repo.waydro.id/ trixie main" > /etc/apt/sources.list.d/waydroid.list
+else
+  echo "[KOK-UYARI:A4:waydroid] Waydroid deposu anahtari indirilemedi"
+fi
+apt-get update
+apt-get install -y waydroid || echo "[KOK-UYARI:A4:waydroid] Waydroid paketi kurulamadi"
+apt-get install -y cage || echo "[KOK-UYARI:A4:waydroid] cage paketi kurulamadi"
+systemctl disable waydroid-container.service 2>/dev/null || true
+exit 0

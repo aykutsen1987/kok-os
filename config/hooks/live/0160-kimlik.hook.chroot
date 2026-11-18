@@ -1,0 +1,17 @@
+#!/bin/sh
+KOK_ADIM="A13"; KOK_MOD="kimlik"
+echo "[KOK:$KOK_ADIM:$KOK_MOD] BASLADI"
+trap 'k=$?; if [ $k -ne 0 ]; then echo "[KOK-HATA:$KOK_ADIM:$KOK_MOD] kod=$k"; else echo "[KOK:$KOK_ADIM:$KOK_MOD] TAMAM"; fi' EXIT
+chmod +x /usr/local/bin/* /usr/local/sbin/kok-dil-uygula 2>/dev/null || true
+for f in kok-hakkinda kok-dil kok-geri-bildirim zenity notify-send; do [ -x /usr/local/bin/$f ] && echo "[KOK:A13:kimlik] hazir: $f" || echo "[KOK-UYARI:A13:kimlik] eksik: $f"; done
+command -v picom >/dev/null 2>&1 && echo "[KOK:A13:kimlik] picom kurulu" || echo "[KOK-UYARI:A13:kimlik] picom kurulu degil (yuvarlak koseler calismaz)"
+locale -a | grep -qi en_US && echo "[KOK:A13:kimlik] en_US yerel ayari var" || echo "[KOK-UYARI:A13:kimlik] en_US yerel ayari yok"
+python3 -c "import sys,json;sys.path.insert(0,'/usr/local/lib/kok');import kok_i18n;json.load(open('/usr/share/kok/ceviri-en.json'));print('[KOK:A13:kimlik] ceviri sozlugu gecerli')" || echo "[KOK-UYARI:A13:kimlik] ceviri sozlugu hatali"
+python3 -c "import json;json.load(open('/usr/share/kok/android-katalog.json'));print('[KOK:A13:kimlik] katalog gecerli')" || echo "[KOK-UYARI:A13:kimlik] katalog hatali"
+[ -f /usr/share/kok/skel-config/xfce4/panel/launcher-10/kok-hakkinda.desktop ] && echo "[KOK:A13:kimlik] i dugmesi dosyasi var" || echo "[KOK-UYARI:A13:kimlik] i dugmesi dosyasi yok"
+mkdir -p /etc/systemd/system/multi-user.target.wants
+ln -sf /etc/systemd/system/kok-canli-parola.service /etc/systemd/system/multi-user.target.wants/kok-canli-parola.service
+systemctl enable kok-canli-parola.service 2>/dev/null || true
+[ -L /etc/systemd/system/multi-user.target.wants/kok-canli-parola.service ] && echo "[KOK:A13:kimlik] canli parola servisi etkin" || echo "[KOK-UYARI:A13:kimlik] canli parola servisi etkinlestirilemedi"
+dpkg -s user-setup >/dev/null 2>&1 && echo "[KOK:A13:kimlik] user-setup kurulu (kok kullanicisi olusturulabilir)" || echo "[KOK-HATA:A13:kimlik] user-setup KURULU DEGIL: kok kullanicisi olusmaz!"
+exit 0

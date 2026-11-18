@@ -1,0 +1,14 @@
+psmisc
+dconf-cli
+python3-gi
+gir1.2-gtk-3.0
+libglib2.0-dev-bin
+xclip
+libarchive-tools
+bzip2
+libxmu6
+libxt6t64
+picom
+hunspell-en-us
+x11-utils
+python3-pil

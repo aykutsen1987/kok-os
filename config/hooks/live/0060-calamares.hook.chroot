@@ -1,0 +1,19 @@
+#!/bin/sh
+KOK_ADIM="A5"; KOK_MOD="calamares"
+echo "[KOK:$KOK_ADIM:$KOK_MOD] BASLADI"
+trap 'k=$?; if [ $k -ne 0 ]; then echo "[KOK-HATA:$KOK_ADIM:$KOK_MOD] kod=$k"; else echo "[KOK:$KOK_ADIM:$KOK_MOD] TAMAM"; fi' EXIT
+if [ ! -f /etc/calamares/settings.conf ]; then
+  echo "[KOK-UYARI:A5:calamares] /etc/calamares/settings.conf yok; calamares-settings-debian kurulmamis olabilir"
+  exit 0
+fi
+if grep -q '^branding:' /etc/calamares/settings.conf; then
+  sed -i 's/^branding:.*/branding: kok/' /etc/calamares/settings.conf
+else
+  echo "branding: kok" >> /etc/calamares/settings.conf
+fi
+# Debian'ın marka klasöründeki eksik dosyaları (varsa) tamamla
+if [ -d /usr/share/calamares/branding/debian ]; then
+  cp -n /usr/share/calamares/branding/debian/* /etc/calamares/branding/kok/ 2>/dev/null || true
+fi
+[ -d /etc/calamares/branding/kok ] || echo "[KOK-UYARI:A5:calamares] marka klasoru eksik"
+exit 0

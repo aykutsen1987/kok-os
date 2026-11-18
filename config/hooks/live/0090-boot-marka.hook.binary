@@ -1,0 +1,14 @@
+#!/bin/sh
+KOK_ADIM="A7"; KOK_MOD="boot-marka"
+echo "[KOK:$KOK_ADIM:$KOK_MOD] BASLADI"
+for B in . binary ../binary; do
+  if [ -d "$B/isolinux" ] || [ -d "$B/boot/grub" ]; then cd "$B"; break; fi
+done
+echo "Boot dizini: $(pwd)"
+for f in isolinux/*.cfg boot/grub/*.cfg; do
+  if [ -f "$f" ]; then
+    sed -i 's/Debian GNU\/Linux/Kok OS/g; s/Debian Live/Kok OS/g; s/Live system/Kok OS Canli/g' "$f" && echo "[KOK:A7:boot-marka] guncellendi $f"
+  fi
+done
+echo "[KOK:$KOK_ADIM:$KOK_MOD] TAMAM"
+exit 0

@@ -1,0 +1,21 @@
+#!/bin/sh
+KOK_ADIM="A5"; KOK_MOD="marka"
+echo "[KOK:$KOK_ADIM:$KOK_MOD] BASLADI"
+trap 'k=$?; if [ $k -ne 0 ]; then echo "[KOK-HATA:$KOK_ADIM:$KOK_MOD] kod=$k"; else echo "[KOK:$KOK_ADIM:$KOK_MOD] TAMAM"; fi' EXIT
+# os-release: base-files güncellenince marka silinmesin diye dosya yerel olarak yönlendirilir (dpkg-divert)
+GERCEK=$(readlink -f /etc/os-release)
+if [ -n "$GERCEK" ] && [ -f "$GERCEK" ]; then
+  dpkg-divert --local --rename --divert "${GERCEK}.debian" --add "$GERCEK" >/dev/null 2>&1
+  [ -f "${GERCEK}.debian" ] && cp "${GERCEK}.debian" "$GERCEK"
+  sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="Kök OS 0.9"/; s/^NAME=.*/NAME="Kök OS"/' "$GERCEK"
+  [ -L /etc/os-release ] || ln -sf "../usr/lib/os-release" /etc/os-release
+fi
+echo "Kök OS 0.9 \\n \\l" > /etc/issue
+mkdir -p /etc/kok
+cat > /etc/kok/surum <<EOT
+KOK_SURUM=0.9
+ADIMLAR=2-15
+TABAN=Debian trixie
+DERLEME_TARIHI=$(date '+%F %T')
+EOT
+exit 0

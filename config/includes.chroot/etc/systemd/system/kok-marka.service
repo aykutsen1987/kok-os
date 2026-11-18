@@ -1,0 +1,11 @@
+[Unit]
+Description=Kok OS sistem adini (os-release) denetle
+DefaultDependencies=no
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/kok-marka-duzelt
+
+[Install]
+WantedBy=multi-user.target

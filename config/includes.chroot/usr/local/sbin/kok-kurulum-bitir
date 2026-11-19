@@ -6,6 +6,8 @@ rm -f /etc/sudoers.d/live /etc/sudoers.d/*live* /etc/polkit-1/rules.d/49-kok-can
 rm -f /etc/systemd/system/multi-user.target.wants/kok-canli-parola.service 2>/dev/null
 mkdir -p /etc/lightdm/lightdm.conf.d
 printf '[Seat:*]\ngreeter-session=lightdm-gtk-greeter\nuser-session=xfce\n' > /etc/lightdm/lightdm.conf.d/50-kok.conf
+# 0) İlk açılışta ldconfig/hwdb yeniden çalışıp açılışı uzatmasın
+touch /etc/.updated /var/.updated 2>/dev/null
 # 1a) Canlı oturumdan kalan eski ev klasörü (kullanıcı silindiyse)
 [ -d /home/kok ] && ! getent passwd kok >/dev/null 2>&1 && rm -rf /home/kok
 # 1b) Bilgisayar adı (kurulumda sorulmaz)

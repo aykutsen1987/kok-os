@@ -16,4 +16,15 @@ echo "[KOK:$KOK_ADIM:$KOK_MOD] picom paket otomatik baslatmasi kapatildi"
 # Açılışı yavaşlatan beklemeler: ağ hazır olana kadar bekleme ve gereksiz lxc servisleri (Waydroid bunlara ihtiyaç duymaz)
 systemctl mask NetworkManager-wait-online.service 2>/dev/null || true
 for s in lxc.service lxc-net.service lxc-monitord.service; do systemctl disable "$s" 2>/dev/null || true; done
+# Açılış hızlandırma (eski disklerde apparmor 50 sn, ldconfig 25 sn, e2scrub 10 sn sürebiliyordu)
+# 1) AppArmor profilleri arka planda yüklensin: açılışı (sysinit.target) beklemesin, düşük öncelikle çalışsın
+mkdir -p /etc/systemd/system/apparmor.service.d
+printf '[Unit]\nBefore=\n\n[Service]\nNice=10\n' > /etc/systemd/system/apparmor.service.d/kok-hizli.conf
+# 2) Profil derlemesi daha hızlı olsun
+if [ -f /etc/apparmor/parser.conf ]; then
+  grep -q '^Optimize=' /etc/apparmor/parser.conf || echo 'Optimize=compress-fast' >> /etc/apparmor/parser.conf
+fi
+# 3) Gereksiz her açılış işi
+systemctl mask e2scrub_reap.service 2>/dev/null || true
+echo "[KOK:$KOK_ADIM:$KOK_MOD] acilis hizlandirma ayarlari yazildi"
 exit 0

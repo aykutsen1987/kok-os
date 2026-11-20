@@ -308,8 +308,22 @@ class Pencere(Gtk.Window):
         self.dugme(b, "Sağlık Kontrolü", lambda: calistir([BIN + "/kok-saglik", "--gui"]))
         self.dugme(b, "Hata Raporu Oluştur", lambda: calistir([BIN + "/kok-hata-raporu"]))
         self.dugme(b, "Hata Raporunu GitHub'a Gönder", lambda: calistir([BIN + "/kok-geri-bildirim"]))
-        self.dugme(b, "Kök OS'u Diske Kur", lambda: calistir(["sudo", "-E", "calamares"]))
+        self.etiket(b, "Açılış hızı", True)
+        self.etiket(b, "AppArmor (güvenlik profilleri) eski bilgisayarlarda açılışı 50 saniyeye kadar uzatabilir. Kapatırsanız sistem daha hızlı açılır; yalnızca birkaç arka plan servisinin ek koruması devre dışı kalır.")
+        self.aa_durum = self.etiket(b, self.aa_metin())
+        self.dugme(b, "AppArmor'u Kapat (açılışı hızlandırır)", lambda: self.aa_ayar(False))
+        self.dugme(b, "AppArmor'u Aç (varsayılan)", lambda: self.aa_ayar(True))
+        self.dugme(b, "Kök OS'u Diske Kur", lambda: calistir([BIN + "/kok-kur"]))
         return self.kaydirmali(b)
+
+    def aa_metin(self):
+        sonuc = subprocess.run(["systemctl", "is-enabled", "apparmor.service"], capture_output=True, text=True)
+        return "AppArmor şu an: " + ("AÇIK" if sonuc.stdout.strip() == "enabled" else "KAPALI")
+
+    def aa_ayar(self, ac):
+        subprocess.run([BIN + "/kok-yetkili", "systemctl", "enable" if ac else "disable", "apparmor.service"],
+                       capture_output=True)
+        self.aa_durum.set_text(self.aa_metin() + " (bilgisayarı yeniden başlatınca geçerli olur)")
 
 
 if __name__ == "__main__":

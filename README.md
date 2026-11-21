@@ -21,3 +21,8 @@ ya da `v0.9` gibi bir etiket (tag) gönderin; ISO, GitHub'ın 2 GB dosya sınır
 - `.github/workflows/build-iso.yml` : otomatik derleme ve yayınlama
 - `kok-build-rapor.sh` : derleme raporu (hata ayıklama için)
 - `docs/` : kurulum rehberi (PDF)
+  
+## 👤 Geliştirici
+
+**@aykutsen1987**
+[YouTube](https://www.youtube.com/@aykutsen1987) · [Play Store uygulamaları](https://play.google.com/store/search?q=pub%3A%20%40aykutsen1987&c=apps)

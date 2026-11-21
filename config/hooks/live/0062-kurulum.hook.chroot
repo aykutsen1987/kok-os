@@ -2,7 +2,7 @@
 KOK_ADIM="A14"; KOK_MOD="kurulum"
 echo "[KOK:$KOK_ADIM:$KOK_MOD] BASLADI"
 trap 'k=$?; if [ $k -ne 0 ]; then echo "[KOK-HATA:$KOK_ADIM:$KOK_MOD] kod=$k"; else echo "[KOK:$KOK_ADIM:$KOK_MOD] TAMAM"; fi' EXIT
-chmod +x /usr/local/sbin/kok-kurulum-bitir /usr/local/bin/kok-diyalog /usr/local/bin/kok-kur 2>/dev/null
+chmod +x /usr/local/sbin/kok-kurulum-bitir /usr/local/bin/kok-diyalog /usr/local/bin/kok-kur /usr/local/bin/kok-onkontrol /usr/local/bin/kok-kurulum-teshis 2>/dev/null
 if [ ! -f /etc/calamares/settings.conf ]; then echo "[KOK-UYARI:A14:kurulum] settings.conf yok"; exit 0; fi
 python3 - <<'PY'
 import os, re, sys

@@ -12,3 +12,4 @@ cryptsetup
 gparted
 grub-common
 grub2-common
+smartmontools

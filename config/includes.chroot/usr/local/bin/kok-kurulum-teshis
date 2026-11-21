@@ -1,0 +1,27 @@
+#!/bin/bash
+# Kurulum bittikten/çöktükten sonra: kernel kayıtlarına bakıp nedeni (ISO/USB mı, sabit disk mi) söyler.
+# Sorun yoksa sessiz kalır. Argüman: kurulum başlamadan önceki dmesg satır sayısı.
+ONCE=${1:-0}
+MEDYA=${KOK_MEDIUM:-/run/live/medium}
+YENI=$(sudo -n dmesg 2>/dev/null | tail -n +$((ONCE+1)))
+[ -z "$YENI" ] && exit 0
+SQ=$(echo "$YENI" | grep -i -E "SQUASHFS error|squashfs.*(unable|corrupt|failed)|(xz|zstd|lzma).*(error|corrupt|decompress)")
+IO=$(echo "$YENI" | grep -i -E "I/O error|Buffer I/O|blk_update_request|critical medium|unrecovered read|medium error|ata[0-9.]+.*(failed|exception)")
+[ -z "$SQ$IO" ] && exit 0
+kaynak=$(findmnt -n -o SOURCE "$MEDYA" 2>/dev/null)
+canli=$(lsblk -no PKNAME "$kaynak" 2>/dev/null | head -1); [ -z "$canli" ] && canli=$(basename "$kaynak" 2>/dev/null)
+aygit=$(echo "$IO" | grep -o -E "dev [a-z0-9]+" | awk '{print $2}' | sort | uniq -c | sort -rn | head -1 | awk '{print $2}')
+aygit=${aygit%%[0-9]*}
+if [ -n "$SQ" ]; then
+  BASLIK="KURULUM MEDYASI BOZUK"
+  METIN="Kurulum sırasında <b>ISO dosyasının içinde okunamayan/bozuk veri</b> bulundu.\n\n<b>Büyük olasılıkla:</b> ISO parçaları yanlış birleştirilmiş, indirme eksik kalmış ya da USB hatalı yazılmış.\n\n<b>Çözüm:</b> ISO'nun sağlama toplamını (SHA256) doğrulayın, gerekiyorsa yeniden indirin ve USB'yi Rufus (DD modu) ile yeniden yazın."
+elif [ -n "$aygit" ] && [ "$aygit" = "$canli" ]; then
+  BASLIK="USB BELLEK OKUNAMIYOR"
+  METIN="Kurulum medyasının bulunduğu USB bellekte <b>okuma hatası</b> görüldü ($aygit).\n\n<b>Çözüm:</b> USB'yi başka bir girişe takın ya da başka bir USB bellekle ISO'yu yeniden yazın."
+else
+  BASLIK="SABİT DİSK HATASI"
+  METIN="Kurulum yapılan <b>sabit diskte okuma/yazma hatası</b> görüldü${aygit:+ (/dev/$aygit)}.\n\n<b>Çözüm:</b> Önce önemli dosyalarınızı yedekleyin. Windows'ta CrystalDiskInfo ile diskin sağlığına bakın; sağlık 'İyi' değilse diski değiştirmek gerekir."
+fi
+/usr/local/bin/kok-diyalog --tur red --baslik "$BASLIK" --metin "$METIN" --evet "Hata raporu oluştur" --hayir "Kapat"
+[ $? -eq 0 ] && /usr/local/bin/kok-hata-raporu
+exit 0

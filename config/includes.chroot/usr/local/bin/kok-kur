@@ -1,5 +1,12 @@
 #!/bin/bash
-# Kurulum programını açar; arkada kalan karşılama penceresini önce kapatır.
+# Kurulum programını açar: karşılama penceresini kapatır, önce (isteğe bağlı) medya/disk denetimi yapar,
+# kurulum çökerse nedenini (ISO/USB mı, disk mi) söyler.
 pkill -f "kok-karsilama" 2>/dev/null
-sleep 0.3
-exec sudo -E calamares "$@"
+if grep -q "boot=live" /proc/cmdline 2>/dev/null && [ ! -f "$HOME/.config/kok/onkontrol-atla" ]; then
+  /usr/local/bin/kok-onkontrol || exit 0
+fi
+ONCE=$(sudo -n dmesg 2>/dev/null | wc -l)
+sudo -E calamares "$@"
+KOD=$?
+/usr/local/bin/kok-kurulum-teshis "$ONCE" >/dev/null 2>&1
+exit $KOD

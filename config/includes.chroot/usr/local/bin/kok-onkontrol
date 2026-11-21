@@ -1,0 +1,113 @@
+#!/bin/bash
+# Kök OS: kurulum öncesi denetim (sıkı değil, atlanabilir).
+#  1) Kurulum medyası (ISO/USB/Kurboot) bozuk mu?  2) Sabit diskler sağlıklı mı?  3) Windows (NTFS) birimleri temiz mi?
+# Çıkış: 0 = kuruluma devam, 1 = kullanıcı kurulumu durdurdu.
+MEDYA=${KOK_MEDIUM:-/run/live/medium}
+SONUC=$(mktemp)
+SIM=${KOK_TEST:-0}
+ekle() { echo "$1|$2" >> "$SONUC"; }          # tur|metin   (tur: ok, uyari, hata)
+esc()  { sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g'; }
+
+denetle_medya() {
+  local liste="$MEDYA/sha256sum.txt"
+  if [ ! -f "$liste" ]; then ekle uyari "Medya doğrulama dosyası bulunamadı; medya denetimi atlandı."; return; fi
+  local cikti satirlar
+  satirlar=$(cd "$MEDYA" && grep -E ' (\./)?live/' sha256sum.txt)
+  if [ -z "$satirlar" ]; then ekle uyari "Medya doğrulama listesi okunamadı; medya denetimi atlandı."; return; fi
+  cikti=$(cd "$MEDYA" && echo "$satirlar" | sha256sum -c --quiet 2>&1)
+  if [ $? -eq 0 ]; then ekle ok "Kurulum medyası (ISO/USB) sağlam."
+  else
+    local n; n=$(echo "$cikti" | grep -c -E 'FAILED|bulunamad|No such')
+    ekle hata "Kurulum medyası BOZUK ($n dosya hatalı). Büyük olasılıkla ISO parçaları yanlış birleştirilmiş, indirme eksik kalmış ya da USB hatalı yazılmış. ISO'nun sağlama toplamını doğrulayıp USB'yi yeniden yazın."
+  fi
+}
+
+canli_disk() {  # canlı medyanın bulunduğu fiziksel disk adı
+  local kaynak ad
+  kaynak=$(findmnt -n -o SOURCE "$MEDYA" 2>/dev/null)
+  [ -z "$kaynak" ] && return
+  ad=$(lsblk -no PKNAME "$kaynak" 2>/dev/null | head -1)
+  [ -z "$ad" ] && ad=$(basename "$kaynak")
+  echo "$ad"
+}
+
+denetle_diskler() {
+  local canli; canli=$(canli_disk)
+  local d
+  for d in $(lsblk -dn -o NAME,TYPE 2>/dev/null | awk '$2=="disk"{print $1}'); do
+    [ "$d" = "$canli" ] && continue
+    case "$d" in loop*|zram*|ram*|sr*) continue ;; esac
+    local etiket; etiket="/dev/$d ($(lsblk -dn -o SIZE,MODEL /dev/$d 2>/dev/null | sed 's/  */ /g'))"
+    if command -v smartctl >/dev/null 2>&1; then
+      local h a
+      h=$(smartctl -H /dev/$d 2>/dev/null | grep -i 'overall-health\|SMART Health Status')
+      a=$(smartctl -A /dev/$d 2>/dev/null)
+      if echo "$h" | grep -qi 'FAILED'; then
+        ekle hata "Disk $etiket: SMART sağlık testi BAŞARISIZ. Disk bozulmak üzere olabilir; önce önemli dosyalarınızı yedekleyin."
+      else
+        local r p
+        r=$(echo "$a" | awk '/Reallocated_Sector_Ct/{print $NF}' | head -1)
+        p=$(echo "$a" | awk '/Current_Pending_Sector/{print $NF}' | head -1)
+        if [ "${p:-0}" -gt 0 ] 2>/dev/null || [ "${r:-0}" -gt 50 ] 2>/dev/null; then
+          ekle uyari "Disk $etiket: bozuk sektör belirtileri var (yeniden atanan: ${r:-0}, bekleyen: ${p:-0}). Kurulum öncesi yedek almanız önerilir."
+        elif [ -n "$h" ]; then ekle ok "Disk $etiket: sağlıklı görünüyor."
+        else ekle ok "Disk $etiket: SMART bilgisi okunamadı (bu disk türünde normal olabilir)."; fi
+      fi
+    fi
+    if dmesg 2>/dev/null | grep -i -E "$d.*(I/O error|critical medium error|unrecovered read)" >/dev/null; then
+      ekle hata "Disk /dev/$d: çekirdek kayıtlarında okuma/yazma (I/O) hatası var. Disk arızalı olabilir."
+    fi
+  done
+}
+
+denetle_ntfs() {
+  command -v ntfs-3g.probe >/dev/null 2>&1 || return
+  local p
+  for p in $(blkid -t TYPE=ntfs -o device 2>/dev/null); do
+    if ! ntfs-3g.probe --readwrite "$p" >/dev/null 2>&1; then
+      ekle uyari "Windows birimi $p temiz kapatılmamış ya da hatalı (Hızlı Başlatma/hazırda bekletme açık olabilir). Windows'ta 'chkdsk /f' ve 'powercfg -h off' çalıştırın ya da aşağıdan onarmayı deneyin."
+      echo "$p" >> "$SONUC.ntfs"
+    fi
+  done
+}
+
+calistir_denetimler() { denetle_medya; denetle_diskler; denetle_ntfs; }
+
+# ---- Test kipi (arayüzsüz) ----
+if [ "$SIM" = "1" ]; then calistir_denetimler; cat "$SONUC"; exit 0; fi
+
+# ---- Başlangıç sorusu ----
+/usr/local/bin/kok-diyalog --tur blue --baslik "KURULUM ÖNCESİ DENETİM" \
+  --metin "Kurulumdan önce kurulum medyasını (ISO/USB) ve disklerinizi hızlıca denetleyelim mi?\n\nSüre: yaklaşık 2–3 dakika. Bozuk bir ISO ya da arızalı disk yüzünden kurulumun yarıda kalmasını önler. Atlayabilirsiniz." \
+  --evet "Denetle (önerilir)" --hayir "Atla"
+[ $? -eq 0 ] || exit 0
+
+( calistir_denetimler ) &
+PID=$!
+( while kill -0 $PID 2>/dev/null; do echo "# Denetleniyor… (medya ve diskler)"; sleep 1; done; echo 100 ) | \
+  zenity --progress --pulsate --auto-close --no-cancel --title="Kök OS" --width=420 2>/dev/null
+wait $PID
+
+# ---- Windows birimi onarma isteği ----
+if [ -f "$SONUC.ntfs" ]; then
+  zenity --question --width=460 --title="Windows birimini onar" \
+    --text="Bazı Windows birimleri temiz kapatılmamış görünüyor.\n\nBasit onarım (ntfsfix) 'kirli' işaretini temizler ve Windows'un bir sonraki açılışta diski denetlemesini sağlar. Verilere dokunmaz.\n\nDenemek ister misiniz?" 2>/dev/null
+  if [ $? -eq 0 ]; then
+    while read -r b; do /usr/local/bin/kok-yetkili ntfsfix -d "$b" >/dev/null 2>&1; done < "$SONUC.ntfs"
+    ekle ok "Windows birimleri için basit onarım uygulandı. Windows ilk açılışta disk denetimi yapabilir; bitmesini bekleyin."
+  fi
+fi
+
+# ---- Özet ----
+HATA=$(grep -c '^hata|' "$SONUC"); UYARI=$(grep -c '^uyari|' "$SONUC")
+OKUNAN=$(grep -v '^ok|' "$SONUC" | cut -d'|' -f2- | esc | sed 's/^/• /')
+if [ "$HATA" -eq 0 ] && [ "$UYARI" -eq 0 ]; then
+  /usr/local/bin/kok-diyalog --tur green --baslik "HER ŞEY YOLUNDA" --metin "Kurulum medyası ve diskler sağlıklı görünüyor. Kuruluma geçebilirsiniz." --evet "Kuruluma geç" --sure 8
+  exit 0
+fi
+TUR=orange; BASLIK="DİKKAT: KÜÇÜK SORUNLAR VAR"
+[ "$HATA" -gt 0 ] && { TUR=red; BASLIK="SORUN BULUNDU"; }
+/usr/local/bin/kok-diyalog --tur $TUR --baslik "$BASLIK" \
+  --metin "$OKUNAN\n\nİsterseniz yine de devam edebilirsiniz; ancak önemli dosyalarınızı yedeklemeniz önerilir." \
+  --evet "Yine de devam et" --hayir "Kurulumu durdur"
+[ $? -eq 0 ] && exit 0 || exit 1

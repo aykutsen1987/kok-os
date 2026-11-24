@@ -122,6 +122,8 @@ jobs:
             cp "$ISO" /tmp/yayin/
             PARCALI=0
           fi
+          PARCALAR=$(cd /tmp/yayin && ls ${AD}.0* 2>/dev/null | sort | tr '\n' ' ')
+          PLUS=$(echo "$PARCALAR" | sed 's/ *$//; s/ /+/g')
           (cd /tmp/cikti && sha256sum "$AD") > /tmp/yayin/SHA256SUMS.txt
           (cd /tmp/yayin && for f in ${AD}.0*; do [ -f "$f" ] && sha256sum "$f"; done) >> /tmp/yayin/SHA256SUMS.txt 2>/dev/null || true
           ETIKET="v${KOK_SURUM}"; [ "${GITHUB_REF_TYPE}" = "tag" ] && ETIKET="${GITHUB_REF_NAME}"
@@ -138,13 +140,13 @@ jobs:
               echo
               echo "**Windows (Komut İstemi):**"
               echo '```'
-              echo "copy /b ${AD}.001+${AD}.002 ${AD}"
+              echo "copy /b ${PLUS} ${AD}"
               echo '```'
               echo "**Linux / macOS:**"
               echo '```'
               echo "cat ${AD}.0* > ${AD}"
               echo '```'
-              echo "Ardından SHA256SUMS.txt içindeki ilk satırla dosyanın sağlama toplamını karşılaştırın."
+              echo "Toplam parça: $(echo $PARCALAR | wc -w). Hepsi indirilmeli. ZORUNLU: birleşen ISO'nun SHA256 değeri (Windows: certutil -hashfile ${AD} SHA256) SHA256SUMS.txt içindeki ilk satırla birebir aynı olmalı; aynı değilse USB'ye yazmayın."
             else
               echo "ISO dosyasını indirip USB belleğe yazın (Rufus, DD modu)."
             fi

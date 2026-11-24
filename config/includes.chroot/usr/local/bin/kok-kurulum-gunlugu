@@ -1,0 +1,35 @@
+#!/bin/bash
+# Kurulum çökünce nedenini tek dosyada toplar (~/kok-kurulum-hata.txt) ve kısa özet gösterir.
+ONCE=${1:-0}
+MEDYA=${KOK_MEDIUM:-/run/live/medium}
+OUT="$HOME/kok-kurulum-hata.txt"
+S=""; sudo -n true 2>/dev/null && S="sudo -n"
+LOG=""
+for f in /root/.cache/calamares/session.log "$HOME/.cache/calamares/session.log" /var/log/calamares/session.log; do
+  if $S test -f "$f" 2>/dev/null; then LOG="$f"; break; fi
+done
+{
+echo "KÖK OS KURULUM HATA GÜNLÜĞÜ  ($(date '+%F %T'))"
+echo "--- Sürüm:"; cat /etc/kok/surum 2>/dev/null
+echo "--- Bellek:"; free -m
+echo "--- Disk bölümleri:"; lsblk -o NAME,SIZE,FSTYPE,MOUNTPOINT,MODEL 2>&1
+echo "--- Bağlı alanlar (df):"; df -h 2>&1 | grep -v -E 'tmpfs|udev'
+echo "--- ISO içindeki squashfs:"; ls -l "$MEDYA/live/" 2>&1
+echo "--- Calamares: rsync/unpackfs satırları:"
+[ -n "$LOG" ] && $S grep -n -i -E "rsync|unpackfs|No space|Input/output|I/O error|read error|write failed|failed" "$LOG" 2>/dev/null | tail -n 60
+echo "--- Çekirdek (dmesg) yeni kayıtlar:"
+$S dmesg 2>/dev/null | tail -n +$((ONCE+1)) | grep -i -E "squashfs|I/O error|Buffer I/O|blk_update|ata[0-9]|usb.*(reset|error)|ext4.*error|No space|Out of memory|oom|killed process" | tail -n 60
+echo "--- Calamares günlüğünün son 80 satırı:"
+[ -n "$LOG" ] && $S tail -n 80 "$LOG" 2>/dev/null
+} > "$OUT" 2>&1
+# Kısa özet
+NEDEN="Neden kesin belirlenemedi. Ayrıntı için dosyayı geliştiriciye gönderin."
+if grep -q -i "No space left" "$OUT"; then NEDEN="HEDEF BÖLÜM DOLDU: kurulum için ayrılan alan yetersiz. En az 25 GB'lık bölüm seçin."
+elif grep -q -i -E "SQUASHFS error|squashfs.*(corrupt|unable|failed)" "$OUT"; then NEDEN="KURULUM MEDYASI (ISO/USB) OKUNAMADI: ISO bozuk ya da USB belleğin okuması hatalı."
+elif grep -q -i -E "Out of memory|oom|killed process" "$OUT"; then NEDEN="BELLEK YETERSİZ: RAM dolduğu için kopyalama durdu."
+elif grep -q -i -E "I/O error|Buffer I/O|blk_update" "$OUT"; then NEDEN="DİSK/USB OKUMA-YAZMA HATASI (ayrıntı: dosyanın dmesg bölümü)."
+fi
+echo "ÖZET: $NEDEN" >> "$OUT"
+/usr/local/bin/kok-diyalog --tur red --baslik "KURULUM DURDU" \
+  --metin "$NEDEN\n\nAyrıntılı günlük şuraya kaydedildi:\n<b>$OUT</b>" --evet "Tamam" 2>/dev/null
+exit 0

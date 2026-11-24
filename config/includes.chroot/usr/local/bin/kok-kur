@@ -8,5 +8,9 @@ fi
 ONCE=$(sudo -n dmesg 2>/dev/null | wc -l)
 sudo -E calamares "$@"
 KOD=$?
+if [ $KOD -ne 0 ]; then
+  # Çöküşün gerçek nedenini (rsync/squashfs/disk dolu/bellek) tek dosyada topla: ~/kok-kurulum-hata.txt
+  /usr/local/bin/kok-kurulum-gunlugu "$ONCE" >/dev/null 2>&1
+fi
 /usr/local/bin/kok-kurulum-teshis "$ONCE" >/dev/null 2>&1
 exit $KOD
